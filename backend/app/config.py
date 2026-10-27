@@ -8,7 +8,10 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.1.0"
     DEBUG: bool = False
 
-    CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Comma-separated origins. "*" allows any origin, which is needed when the
+    # frontend is hosted separately from the API (static hosting via FTP).
+    # This demo API sets no cookies, so wildcard CORS is safe here.
+    CORS_ORIGINS: str = "*"
 
     DATABASE_URL: str = "sqlite:///./nersmart.db"
 

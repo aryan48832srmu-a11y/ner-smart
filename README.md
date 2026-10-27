@@ -189,6 +189,10 @@ instance does not spin down before a demo. Update the URL inside that file if
 you deploy to a different hostname. GitHub may delay scheduled runs, so open
 the site once yourself before going on stage.
 
+To host the frontend on shared hosting (InfinityFree, cPanel, Hostinger…) and
+upload it with FileZilla, follow **[DEPLOY-FTP.md](DEPLOY-FTP.md)**. That build
+keeps the API on Render and sets `VITE_API_BASE_URL` accordingly.
+
 Free-plan notes:
 
 - Instances sleep after ~15 minutes idle; the next request takes ~30–60 s.
