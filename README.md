@@ -4,6 +4,10 @@
 
 Internal **Smart India Hackathon 2026** prototype — demo-ready build.
 
+> [!TIP]
+> **Live demo (mobile friendly):** https://ner-smart-vujs.onrender.com
+> Free hosting, so the first visit after idle can take up to ~60 s to wake.
+
 > [!IMPORTANT]
 > The core message of the platform:
 > **"We don't simply find the shortest route. We find the safest and most reliable route based on accessibility, weather, terrain, incidents and logistics priority."**
@@ -170,6 +174,8 @@ bundle + Python runtime.
 
 ### Deploy on Render (free)
 
+The public instance is running at **https://ner-smart-vujs.onrender.com**.
+
 1. Push the project to GitHub. The included `.gitignore` keeps `.env`, the
    SQLite database and `node_modules` out of the repo.
 2. In Render choose **New → Blueprint** and select the repo. `render.yaml`
@@ -177,6 +183,11 @@ bundle + Python runtime.
 3. Optionally set `OPENWEATHER_API_KEY` when prompted; leave it empty to use
    simulated weather. **Never commit `backend/.env`** — it holds a real key.
 4. Render returns a URL like `https://ner-smart-xxxx.onrender.com`.
+
+`.github/workflows/keepalive.yml` pings `/health` every 10 minutes so the free
+instance does not spin down before a demo. Update the URL inside that file if
+you deploy to a different hostname. GitHub may delay scheduled runs, so open
+the site once yourself before going on stage.
 
 Free-plan notes:
 
