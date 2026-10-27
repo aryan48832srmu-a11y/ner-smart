@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     APP_NAME: str = "NER-SMART"
     APP_ENV: str = "production"
-    APP_VERSION: str = "1.1.0"
+    APP_VERSION: str = "1.2.0"
     DEBUG: bool = False
 
     # Comma-separated origins. "*" allows any origin, which is needed when the
