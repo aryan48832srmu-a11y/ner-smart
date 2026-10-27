@@ -13,6 +13,11 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      # A separately hosted frontend (e.g. a static build uploaded over FTP)
+      # calls this API cross-origin, so the demo API allows any origin.
+      # It sets no cookies, so credentialed CORS is not needed.
+      - key: CORS_ORIGINS
+        value: "*"
       # Optional live weather. Add OPENWEATHER_API_KEY in the Render dashboard
       # (Environment tab) after the service is created; leave it unset to keep
       # the built-in simulated weather.
