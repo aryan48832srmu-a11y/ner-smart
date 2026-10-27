@@ -1,0 +1,24 @@
+# Dependencies and build output
+frontend/node_modules/
+frontend/dist/
+backend/venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local database (seeded automatically on first run)
+backend/*.db
+backend/*.db-journal
+backend/*.db-wal
+backend/*.db-shm
+
+# Logs
+*.log
+frontend/dev.log
+
+# Secrets — copy .env.example instead
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env

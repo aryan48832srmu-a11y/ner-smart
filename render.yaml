@@ -1,0 +1,20 @@
+# NER-SMART — Render Blueprint
+# Deploys the single-service Docker image (FastAPI + built React app).
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: ner-smart
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      # Optional live weather. Add OPENWEATHER_API_KEY in the Render dashboard
+      # (Environment tab) after the service is created; leave it unset to keep
+      # the built-in simulated weather.
+      # - key: OPENWEATHER_API_KEY
+      #   sync: false

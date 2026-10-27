@@ -1,0 +1,25 @@
+# Build artifacts and dependencies
+frontend/node_modules
+frontend/dist
+backend/venv
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+
+# Local database and logs
+backend/*.db
+backend/*.db-journal
+backend/*.db-wal
+backend/*.db-shm
+*.log
+
+# Secrets and local overrides (never bake these into an image)
+.env
+.env.*
+backend/.env
+frontend/.env
+
+# Docs / VCS noise
+.git
+.gitignore
+*.md
