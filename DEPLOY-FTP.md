@@ -38,6 +38,61 @@ served at `https://yourdomain.com/`.
 
 ---
 
+## InfinityFree specifically
+
+InfinityFree gives you free hosting on a free subdomain such as
+`yourname.infinityfreeapp.com` (or `.rf.gd`, `.wuaze.com`, `.42web.io`).
+Everything below applies to it.
+
+| Setting | Value |
+| --- | --- |
+| Control panel | <https://dash.infinityfree.com> → **Control Panel** (vPanel) |
+| FTP host | `ftpupload.net` |
+| FTP port | `21` (plain FTP; SFTP is not offered) |
+| FTP username | `if0_XXXXXXXX` — shown under **FTP Accounts** |
+| FTP password | the password you set for that FTP account |
+| Web root | **`htdocs`** |
+| Site URL | `http://yourname.infinityfreeapp.com` |
+
+Steps:
+
+1. In vPanel, open **FTP Accounts** and note the username (`if0_...`). If there
+   is no FTP account yet, create one and copy its password.
+2. In FileZilla connect to `ftpupload.net` port `21` with that username and
+   password.
+3. Open **`htdocs`** on the server side and delete InfinityFree's placeholder
+   files (`index2.html`, `default.php`) if present.
+4. Upload the contents of `D:\SIH project\frontend\dist-ftp` (everything, not
+   the folder itself): `index.html`, `favicon.svg`, the `assets` folder and
+   `.htaccess`. Enable **Server → Force showing hidden files** so `.htaccess`
+   is visible.
+5. Visit `http://yourname.infinityfreeapp.com`. The first visit may show
+   InfinityFree's "checking your browser" screen briefly — that is their
+   anti-bot protection, not the app.
+
+Two InfinityFree quirks worth knowing:
+
+- **No SSL on free subdomains (usually).** The site then loads over `http://`.
+  That is fine: the API is `https://`, and an HTTP page may call an HTTPS API.
+  If your plan offers a free certificate under **SSL/TLS**, install it anyway.
+- **The API must allow your domain.** The backend code in this repo already
+  defaults to `CORS_ORIGINS="*"`, but the live Render service still runs an
+  older build. Until it is redeployed, set `CORS_ORIGINS` to `*` in the Render
+  dashboard (see below), otherwise the page loads but every data request is
+  blocked by the browser.
+
+### Enable the API for your domain on Render
+
+1. Open <https://dashboard.render.com> → **ner-smart** → **Environment**.
+2. Add a variable: key `CORS_ORIGINS`, value `*`.
+3. Click **Save Changes**. Render restarts the service in ~1 minute.
+4. Reload your InfinityFree URL — the dashboard should fill with live data.
+
+(Alternatively, click **Manual Deploy → Deploy latest commit** on the Render
+service. That ships version 1.2.0, which enables wildcard CORS by default.)
+
+---
+
 ## Upload steps (FileZilla)
 
 1. Install FileZilla Client: <https://filezilla-project.org/download.php?type=client>
