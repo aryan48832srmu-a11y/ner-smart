@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:ftp": "tsc -b && vite build --outDir dist-ftp --emptyOutDir && node scripts/copy-htaccess.mjs",
     "lint": "oxlint",
     "preview": "vite preview"
   },

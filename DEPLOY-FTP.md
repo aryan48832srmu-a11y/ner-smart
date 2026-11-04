@@ -1,161 +1,188 @@
-# Publishing NER-SMART with FileZilla (FTP / SFTP)
+# Go live on InfinityFree with FileZilla — step-by-step roadmap
 
-FileZilla is a file-transfer client: it copies files to a web host you already
-own. It cannot host the site by itself, and **shared hosting cannot run the
-Python/FastAPI backend**.
+**Time needed:** about 20 minutes, most of it waiting for uploads.
+**What goes where:** the React site is uploaded to InfinityFree as static files;
+the Python API, AI risk engine and database stay on Render. The build in
+`frontend/dist-ftp` already points at `https://ner-smart-vujs.onrender.com/api`,
+so no server-side code is needed on InfinityFree.
 
-So the working arrangement is:
-
-| Part | Where it runs | How it gets there |
-| --- | --- | --- |
-| React frontend (static files) | Your own domain / shared hosting | Upload with FileZilla |
-| API, AI risk engine, database | Render (already live) | Automatic from GitHub |
-
-The frontend build in this package already points at the live API at
-`https://ner-smart-vujs.onrender.com/api`, so the two halves work together
-with no server-side code on your hosting.
+```
+Visitor ──► yourname.infinityfreeapp.com   (HTML/CSS/JS uploaded by FileZilla)
+                    │  fetch() calls
+                    ▼
+            ner-smart-vujs.onrender.com/api (FastAPI + SQLite on Render)
+```
 
 ---
 
-## What you need from your hosting provider
+## Phase 0 — Collect these first
 
-Look in your host's control panel (cPanel, Plesk, Hostinger hPanel, etc.) for
-**FTP Accounts** / **FTP Access**. You need four values:
-
-| Field | Typical value |
-| --- | --- |
-| Host | `ftp.yourdomain.com` (or an IP address) |
-| Username | `user@yourdomain.com` |
-| Password | the FTP password you set |
-| Port | `21` for FTP, `22` for SFTP |
-
-If your host offers SFTP (port 22), prefer it — the password is encrypted in
-transit. If not, plain FTP on port 21 is fine for static files.
-
-You also need to know the **web root** folder. On cPanel it is usually
-`public_html`; on some hosts it is `httpdocs` or `www`. Files placed there are
-served at `https://yourdomain.com/`.
+- [ ] InfinityFree account (free, no card): <https://www.infinityfree.com>
+- [ ] A free subdomain chosen during signup, e.g. `ner-smart.rf.gd`
+- [ ] FileZilla Client: <https://filezilla-project.org/download.php?type=client>
+- [ ] Access to <https://dashboard.render.com> (same GitHub account)
+- [ ] This folder: `D:\SIH project\frontend\dist-ftp`
+      (or the zip `D:\SIH project\ner-smart-website.zip`)
 
 ---
 
-## InfinityFree specifically
+## Phase 1 — Make the API accept your domain (Render, ~2 min)
 
-InfinityFree gives you free hosting on a free subdomain such as
-`yourname.infinityfreeapp.com` (or `.rf.gd`, `.wuaze.com`, `.42web.io`).
-Everything below applies to it.
+The API rejects browser calls from unknown domains unless it allows them.
+This is the step that most often makes the site look "empty".
 
-| Setting | Value |
+- [ ] Open <https://dashboard.render.com> → service **ner-smart** → **Environment**
+- [ ] Add variable: key `CORS_ORIGINS`, value `*`
+- [ ] Click **Save Changes** and wait for the service to restart (~1 min)
+- [ ] Optional but recommended: **Manual Deploy → Deploy latest commit**
+      (ships v1.2.0 with the improved map and built-in wildcard CORS)
+
+Verify from PowerShell (replace the URL with your InfinityFree address):
+
+```powershell
+curl.exe -s -D - -o NUL -H "Origin: http://ner-smart.rf.gd" `
+  https://ner-smart-vujs.onrender.com/api/dashboard
+```
+
+Look for a line `access-control-allow-origin: ...`. If it is missing, the
+environment variable was not saved — repeat the step.
+
+---
+
+## Phase 2 — Create the hosting account (~5 min)
+
+- [ ] Sign in at <https://dash.infinityfree.com>
+- [ ] **Create Account** → choose **Free Subdomain** (or use a domain you own)
+- [ ] Pick a name, e.g. `ner-smart` → your site becomes
+      `http://ner-smart.rf.gd` (availability varies by extension)
+- [ ] Select the **free hosting** plan and create the account
+- [ ] Wait until the account shows **Active** (usually instant, up to 15 min)
+
+Write down the site URL: `http://__________________________`
+
+---
+
+## Phase 3 — Get the FTP details (~1 min)
+
+In the InfinityFree client area, open **Control Panel (vPanel) → FTP Accounts**,
+or the account's **FTP details** box.
+
+| Field | Value |
 | --- | --- |
-| Control panel | <https://dash.infinityfree.com> → **Control Panel** (vPanel) |
-| FTP host | `ftpupload.net` |
-| FTP port | `21` (plain FTP; SFTP is not offered) |
-| FTP username | `if0_XXXXXXXX` — shown under **FTP Accounts** |
-| FTP password | the password you set for that FTP account |
+| Host | `ftpupload.net` |
+| Port | `21` |
+| Protocol | FTP |
+| Username | `if0_XXXXXXXX` (from vPanel) |
+| Password | your InfinityFree / FTP password |
 | Web root | **`htdocs`** |
-| Site URL | `http://yourname.infinityfreeapp.com` |
-
-Steps:
-
-1. In vPanel, open **FTP Accounts** and note the username (`if0_...`). If there
-   is no FTP account yet, create one and copy its password.
-2. In FileZilla connect to `ftpupload.net` port `21` with that username and
-   password.
-3. Open **`htdocs`** on the server side and delete InfinityFree's placeholder
-   files (`index2.html`, `default.php`) if present.
-4. Upload the contents of `D:\SIH project\frontend\dist-ftp` (everything, not
-   the folder itself): `index.html`, `favicon.svg`, the `assets` folder and
-   `.htaccess`. Enable **Server → Force showing hidden files** so `.htaccess`
-   is visible.
-5. Visit `http://yourname.infinityfreeapp.com`. The first visit may show
-   InfinityFree's "checking your browser" screen briefly — that is their
-   anti-bot protection, not the app.
-
-Two InfinityFree quirks worth knowing:
-
-- **No SSL on free subdomains (usually).** The site then loads over `http://`.
-  That is fine: the API is `https://`, and an HTTP page may call an HTTPS API.
-  If your plan offers a free certificate under **SSL/TLS**, install it anyway.
-- **The API must allow your domain.** The backend code in this repo already
-  defaults to `CORS_ORIGINS="*"`, but the live Render service still runs an
-  older build. Until it is redeployed, set `CORS_ORIGINS` to `*` in the Render
-  dashboard (see below), otherwise the page loads but every data request is
-  blocked by the browser.
-
-### Enable the API for your domain on Render
-
-1. Open <https://dashboard.render.com> → **ner-smart** → **Environment**.
-2. Add a variable: key `CORS_ORIGINS`, value `*`.
-3. Click **Save Changes**. Render restarts the service in ~1 minute.
-4. Reload your InfinityFree URL — the dashboard should fill with live data.
-
-(Alternatively, click **Manual Deploy → Deploy latest commit** on the Render
-service. That ships version 1.2.0, which enables wildcard CORS by default.)
 
 ---
 
-## Upload steps (FileZilla)
+## Phase 4 — Upload the site (~5 min)
 
-1. Install FileZilla Client: <https://filezilla-project.org/download.php?type=client>
-2. Open **File → Site Manager → New site** and fill in:
-   - **Protocol:** SFTP if available, otherwise FTP
-   - **Host / Port / User / Password** from the table above
-   - Click **Connect** (accept the host key if SFTP asks)
-3. On the left pane, open `D:\SIH project\frontend\dist-ftp`.
-4. On the right pane, open your web root (e.g. `public_html`).
-5. **Delete old files first** if the folder has a previous site (keep
-   `.well-known` if it exists — it is used for SSL certificates).
-6. Select everything in the left pane — `index.html`, `favicon.svg`, the
-   `assets` folder **and** `.htaccess` — then right-click → **Upload**.
-   - `.htaccess` is hidden on some systems. In FileZilla use
-     **Server → Force showing hidden files** so you can see it.
-7. Wait for the queue to finish, then open `https://yourdomain.com/`.
+- [ ] Install and open FileZilla
+- [ ] **File → Site Manager → New site**
+- [ ] Protocol **FTP**, Host `ftpupload.net`, Port `21`, enter username + password
+- [ ] **Connect** (accept any certificate prompt)
+- [ ] **Server → Force showing hidden files** (needed to see `.htaccess`)
+- [ ] Right pane: open **`htdocs`**
+- [ ] Delete the placeholder `index2.html` / `default.php` if present
+      (do not delete `.well-known`)
+- [ ] Left pane: open `D:\SIH project\frontend\dist-ftp`
+- [ ] Select **all five items** and drag them into `htdocs`:
+      - [ ] `index.html`
+      - [ ] `favicon.svg`
+      - [ ] `assets` folder (contains the JS + CSS)
+      - [ ] `.htaccess`
+- [ ] Check the transfer queue: **Failed transfers = 0**
 
-The zip `ner-smart-website.zip` in the project root contains the same files if
-you prefer to upload one archive and extract it in cPanel's File Manager.
-
----
-
-## Important details
-
-- **Upload to the domain root, not a subfolder.** The build references
-  `/assets/...` with absolute paths. If you must use a subfolder, rebuild with
-  `npx vite build --base=/subfolder/`.
-- **`.htaccess` is required** for deep links like `/route-planner` and
-  `/logistics` on Apache/LiteSpeed hosts. Without it those URLs return 404.
-  If your host runs nginx or IIS, `.htaccess` is ignored — use the host's
-  "SPA fallback / rewrite to index.html" setting instead.
-- **HTTPS:** enable the free SSL certificate in your hosting panel so the site
-  loads over `https://`. The API is HTTPS, and browsers block mixed content.
-- **Updating the site:** rebuild and re-upload. From the project root:
-
-  ```powershell
-  cd frontend
-  $env:VITE_API_BASE_URL = "https://ner-smart-vujs.onrender.com/api"
-  npx tsc -b
-  npx vite build --outDir dist-ftp --emptyOutDir
-  ```
-
-  Then upload the new `index.html` and `assets` folder. Replacing old hashed
-  assets is optional — the new entry point references the new filenames. The
-  frontend is also served directly by Render, so the API URL above always
-  stays valid.
+Do **not** upload the whole project. Only these files belong on the web host.
 
 ---
 
-## If you do not actually have shared hosting
+## Phase 5 — Verify it is really live (~3 min)
 
-FileZilla has nothing to connect to without an FTP account. Easier free
-alternatives that need no FTP at all:
+- [ ] Open `http://your-site.rf.gd`
+- [ ] First visit may show InfinityFree's "checking your browser" screen briefly
+- [ ] The dashboard should show live numbers (7 active disruptions, 72% average
+      accessibility) — **not** an "offline cached data" banner
+- [ ] The map shows roads, city dots and incidents; try the **Map / Streets / Dark**
+      buttons at the top-right of the map
+- [ ] **Route Planner → Find Safest Route** returns 3 routes and recommends Route A
+- [ ] Reload the page while on `/logistics` — it must still load (that proves
+      `.htaccess` is working)
+- [ ] Open the site on a phone with mobile data (not your Wi-Fi) to confirm it is
+      genuinely public
 
-- **Render** — already hosting the whole app at
-  <https://ner-smart-vujs.onrender.com>. Add a custom domain under
-  *Settings → Custom Domains*.
-- **Netlify Drop** — <https://app.netlify.com/drop>: drag the
-  `frontend/dist-ftp` folder onto the page and you get a public HTTPS URL in
-  seconds.
-- **Cloudflare Pages** — connect the GitHub repo, build command
-  `npm run build`, output directory `dist`, and set
-  `VITE_API_BASE_URL=https://ner-smart-vujs.onrender.com/api`.
+If your plan offers **SSL/TLS** in vPanel, enable the free certificate and use
+`https://`. The site works over `http://` too, because the API is `https://`.
 
-Those options are faster and give you HTTPS automatically, but they will not
-use FileZilla.
+---
+
+## Phase 6 — Share it
+
+- [ ] Render URL (everything on one origin):
+      <https://ner-smart-vujs.onrender.com>
+- [ ] InfinityFree URL (your domain, same app)
+- [ ] Generate a QR code for judges:
+      `https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=<your-url>`
+- [ ] Open the site once 10 minutes before the demo (Render free tier sleeps)
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| Blank white page | Files uploaded to the wrong folder, or `assets` missing | Upload everything into `htdocs` itself, not a subfolder |
+| Page loads, banner "Live API unreachable — offline cached data" | CORS not enabled, or Render is cold | Repeat **Phase 1**; wait 60 s and reload |
+| 404 when refreshing `/logistics` or `/route-planner` | `.htaccess` missing/ignored | Re-upload `.htaccess`; enable "Force hidden files"; on nginx hosts use the SPA-fallback setting |
+| Map area blank, rest of UI fine | Tile CDN blocked on your network | Use the **Map / Streets / Dark** buttons; "Streets" uses a different CDN |
+| "This site can't be reached" | Account still pending or domain not added | Wait for **Active**, then reload |
+| 530 / 403 on FTP login | Wrong username or password | Copy them again from vPanel → FTP Accounts |
+| Upload stops at 0% repeatedly | Passive mode issue | FileZilla → Edit → Settings → Connection → FTP → Passive; or try port 21 with "Require explicit FTP over TLS" off |
+| Edits disappear after a while | Render free tier resets its SQLite DB on restart | Expected for the demo; attach a Render Disk for persistence |
+| First visit takes 30–60 s | Render free instance was asleep | Open the site before the demo; the keep-alive workflow helps but GitHub throttles it |
+
+---
+
+## Updating the site later
+
+```powershell
+cd "D:\SIH project\frontend"
+$env:VITE_API_BASE_URL = "https://ner-smart-vujs.onrender.com/api"
+npm run build:ftp
+```
+
+Then upload the new `index.html` and the new files in `assets` (the
+`.htaccess` only needs uploading once). The old hashed asset files can be left
+in place or removed; the new `index.html` points at the new filenames.
+
+---
+
+## What lives where
+
+| Part | Host | Notes |
+| --- | --- | --- |
+| React UI (`dist-ftp`) | InfinityFree | Static files, free, no Python needed |
+| API + AI model + SQLite | Render | Free tier; sleeps when idle |
+| Map tiles | CARTO / OpenStreetMap | Loaded directly by the browser |
+| Source code + docs | GitHub | <https://github.com/aryan48832srmu-a11y/ner-smart> |
+
+## Limitations you should know (and can state openly)
+
+- The backend cannot run on InfinityFree free hosting — it needs Python, which
+  shared hosting does not provide. That is why the API stays on Render.
+- Render free instances sleep after ~15 minutes of inactivity; the first request
+  then takes 30–60 s. Open the site once before demoing.
+- Render's free disk is ephemeral: reported incidents and warehouse edits reset
+  when the service restarts. The seeded demo data returns automatically.
+- Weather is simulated unless `OPENWEATHER_API_KEY` is set in Render.
+
+---
+
+## Rollback
+
+Keep a copy of the previous `dist-ftp` folder (or the previous zip) before
+uploading a new build. To roll back, delete `index.html`/`assets` in `htdocs`
+and upload the old set again. `.htaccess` does not need to change.

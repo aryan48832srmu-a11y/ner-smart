@@ -1,9 +1,10 @@
-﻿import { useEffect } from 'react';
-import { MapContainer, TileLayer, Polyline, Marker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+﻿import { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Polyline, Marker, Popup, Tooltip, ScaleControl, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Road, Incident, City, Warehouse, Hospital } from '../../types';
 import { roadStatusMeta, riskColorFor } from '../../utils/format';
+import { MAP_STYLES, MAP_STYLE_ORDER, loadMapStyle, saveMapStyle, type MapStyleId } from './mapStyles';
 
 function endpointIcon(color: string) {
   return L.divIcon({
@@ -131,8 +132,19 @@ export function NERMap({
   className,
 }: NERMapProps) {
   const hasRoutes = (routeLayers?.length ?? 0) > 0;
+  const [styleId, setStyleId] = useState<MapStyleId>(loadMapStyle);
+  const mapStyle = MAP_STYLES[styleId];
+
+  const chooseStyle = (id: MapStyleId) => {
+    setStyleId(id);
+    saveMapStyle(id);
+  };
+
   return (
-    <div className={`relative h-full w-full ${className ?? ''}`} style={{ minHeight: 260 }}>
+    <div
+      className={`relative h-full w-full ${styleId === 'dark' ? 'map-style-dark' : ''} ${className ?? ''}`}
+      style={{ minHeight: 260 }}
+    >
       <MapContainer
         center={CENTER}
         zoom={ZOOM}
@@ -140,9 +152,15 @@ export function NERMap({
         style={{ height: '100%', minHeight: 260, width: '100%', zIndex: 0 }}
       >
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; OpenStreetMap contributors'
+          key={mapStyle.id}
+          url={mapStyle.url}
+          attribution={mapStyle.attribution}
+          subdomains={mapStyle.subdomains}
+          maxZoom={19}
+          detectRetina={mapStyle.retina}
         />
+
+        <ScaleControl position="bottomright" imperial={false} />
 
         <MapInteractions onMapClick={onMapClick} focus={focus} />
 
@@ -267,6 +285,33 @@ export function NERMap({
           </Marker>
         ))}
       </MapContainer>
+
+      {/* Basemap switcher */}
+      <div
+        className="absolute right-2 top-2 z-[500] flex items-center gap-0.5 rounded-lg border border-line bg-base-900/95 p-0.5 shadow-soft backdrop-blur sm:right-3 sm:top-3"
+        role="group"
+        aria-label="Map style"
+      >
+        {MAP_STYLE_ORDER.map((id) => {
+          const option = MAP_STYLES[id];
+          const active = id === styleId;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => chooseStyle(id)}
+              aria-pressed={active}
+              className={`rounded-md px-2.5 py-2 text-[11px] font-semibold transition-colors sm:py-1.5 ${
+                active
+                  ? 'bg-accent-600 text-white shadow-sm'
+                  : 'text-slate-500 hover:bg-base-700 hover:text-slate-700'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Legend */}
       <div className="pointer-events-none absolute bottom-2 left-2 z-[10] max-w-[calc(100%-1rem)] rounded-lg border border-line bg-base-925/90 px-2.5 py-1.5 backdrop-blur sm:bottom-3 sm:left-3 sm:px-3 sm:py-2">

@@ -15,6 +15,7 @@ import { Spinner, LoadingBlock } from '../components/ui/Loading';
 import { EmptyState } from '../components/ui/EmptyState';
 import { riskColorFor, formatTimeAgo } from '../utils/format';
 import { useApp } from '../state/AppContext';
+import { MAP_STYLES } from '../components/map/mapStyles';
 
 function MapClickHandler({ onPick }: { onPick: (pos: { lat: number; lng: number }) => void }) {
   useMapEvents({
@@ -328,7 +329,13 @@ export function Incidents() {
                 style={{ height: '100%', width: '100%' }}
                 scrollWheelZoom
               >
-                <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution='&copy; OpenStreetMap' />
+                <TileLayer
+                  url={MAP_STYLES.voyager.url}
+                  attribution={MAP_STYLES.voyager.attribution}
+                  subdomains={MAP_STYLES.voyager.subdomains}
+                  maxZoom={19}
+                  detectRetina
+                />
                 <MapClickHandler
                   onPick={(pos) => setForm((f) => ({ ...f, lat: pos.lat, lng: pos.lng }))}
                 />

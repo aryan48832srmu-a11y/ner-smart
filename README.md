@@ -190,8 +190,9 @@ you deploy to a different hostname. GitHub may delay scheduled runs, so open
 the site once yourself before going on stage.
 
 To host the frontend on shared hosting (InfinityFree, cPanel, Hostinger…) and
-upload it with FileZilla, follow **[DEPLOY-FTP.md](DEPLOY-FTP.md)**. That build
-keeps the API on Render and sets `VITE_API_BASE_URL` accordingly.
+upload it with FileZilla, follow the step-by-step
+**[DEPLOY-FTP.md — InfinityFree + FileZilla roadmap](DEPLOY-FTP.md)**. That
+build keeps the API on Render and sets `VITE_API_BASE_URL` accordingly.
 
 Free-plan notes:
 

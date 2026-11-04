@@ -117,6 +117,31 @@ html {
   font-family: "Inter", system-ui, sans-serif;
 }
 
+/* The optional night basemap needs a matching canvas so tiles fade in cleanly. */
+.map-style-dark .leaflet-container,
+.leaflet-container.map-style-dark {
+  background: #0b1120;
+}
+
+.leaflet-control-scale-line {
+  border-color: #c3cdde;
+  background: rgba(255, 255, 255, 0.8);
+  color: #475569;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.map-style-dark .leaflet-control-attribution,
+.map-style-dark .leaflet-control-scale-line {
+  background: rgba(15, 23, 42, 0.85) !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.map-style-dark .leaflet-control-attribution a {
+  color: #93c5fd !important;
+}
+
 .leaflet-control-attribution {
   background: rgba(255, 255, 255, 0.85) !important;
   color: #64748b !important;
