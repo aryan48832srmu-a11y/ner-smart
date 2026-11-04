@@ -5,12 +5,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     APP_NAME: str = "NER-SMART"
     APP_ENV: str = "production"
-    APP_VERSION: str = "1.2.0"
+    APP_VERSION: str = "1.2.1"
     DEBUG: bool = False
 
     # Comma-separated origins. "*" allows any origin, which is needed when the
     # frontend is hosted separately from the API (static hosting via FTP).
     # This demo API sets no cookies, so wildcard CORS is safe here.
+    #
+    # `CORS_ALLOW_ALL` defaults to true so the public demo keeps working even
+    # if an old `CORS_ORIGINS` value was left over in the host's dashboard.
+    # Set it to false and list `CORS_ORIGINS` explicitly to restrict origins.
+    CORS_ALLOW_ALL: bool = True
     CORS_ORIGINS: str = "*"
 
     DATABASE_URL: str = "sqlite:///./nersmart.db"

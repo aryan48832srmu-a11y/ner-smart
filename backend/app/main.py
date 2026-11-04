@@ -28,12 +28,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# `CORS_ORIGINS=*` opens the API to any origin, which is what a separately
-# hosted frontend needs (e.g. a static build uploaded to shared hosting via
-# FTP). The wildcard and credentialed requests are mutually exclusive per the
-# CORS spec, and this demo API uses no cookies, so credentials are dropped.
+# A separately hosted frontend (e.g. a static build uploaded to shared hosting
+# via FTP) needs cross-origin access. `CORS_ALLOW_ALL` defaults to true for this
+# public demo, so a stale `CORS_ORIGINS` value in a host dashboard cannot leave
+# the charts and map stuck on offline fallback data. The wildcard and
+# credentialed requests are mutually exclusive per the CORS spec, and this demo
+# API uses no cookies, so credentials are dropped.
 _cors_origins = settings.cors_origin_list
-_cors_wildcard = "*" in _cors_origins
+_cors_wildcard = settings.CORS_ALLOW_ALL or "*" in _cors_origins
 
 app.add_middleware(
     CORSMiddleware,

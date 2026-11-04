@@ -28,14 +28,16 @@ Visitor ──► yourname.infinityfreeapp.com   (HTML/CSS/JS uploaded by FileZi
 
 ## Phase 1 — Make the API accept your domain (Render, ~2 min)
 
-The API rejects browser calls from unknown domains unless it allows them.
-This is the step that most often makes the site look "empty".
+From backend v1.2.1 onward the public demo allows cross-origin calls by
+default (`CORS_ALLOW_ALL=true`), so this step is usually automatic. Do it only
+if the site still shows an *"offline cached data"* banner after loading.
 
 - [ ] Open <https://dashboard.render.com> → service **ner-smart** → **Environment**
 - [ ] Add variable: key `CORS_ORIGINS`, value `*`
+- [ ] Add variable: key `CORS_ALLOW_ALL`, value `true`
 - [ ] Click **Save Changes** and wait for the service to restart (~1 min)
 - [ ] Optional but recommended: **Manual Deploy → Deploy latest commit**
-      (ships v1.2.0 with the improved map and built-in wildcard CORS)
+      (ships v1.2.1 with the improved map, chart fallbacks and open CORS)
 
 Verify from PowerShell (replace the URL with your InfinityFree address):
 
