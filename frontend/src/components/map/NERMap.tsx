@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, Popup, Tooltip, ScaleControl, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -134,10 +134,26 @@ export function NERMap({
   const hasRoutes = (routeLayers?.length ?? 0) > 0;
   const [styleId, setStyleId] = useState<MapStyleId>(loadMapStyle);
   const mapStyle = MAP_STYLES[styleId];
+  const tileErrorCount = useRef(0);
 
   const chooseStyle = (id: MapStyleId) => {
     setStyleId(id);
     saveMapStyle(id);
+  };
+
+  // Reset the failure counter whenever the basemap changes.
+  useEffect(() => {
+    tileErrorCount.current = 0;
+  }, [styleId]);
+
+  // Some networks/firewalls block a tile CDN entirely. If several tiles fail,
+  // fall back to the OSM "Streets" layer (a different CDN) so the map is never
+  // a blank rectangle. The user's saved preference is left untouched.
+  const handleTileError = () => {
+    tileErrorCount.current += 1;
+    if (tileErrorCount.current >= 3 && styleId !== 'streets') {
+      setStyleId('streets');
+    }
   };
 
   return (
@@ -158,6 +174,7 @@ export function NERMap({
           subdomains={mapStyle.subdomains}
           maxZoom={19}
           detectRetina={mapStyle.retina}
+          eventHandlers={{ tileerror: handleTileError }}
         />
 
         <ScaleControl position="bottomright" imperial={false} />

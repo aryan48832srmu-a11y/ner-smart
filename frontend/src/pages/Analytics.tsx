@@ -18,6 +18,7 @@ import {
 } from 'recharts';
 import { api } from '../services/api';
 import { useApi } from '../hooks/useApi';
+import { demoAnalytics } from '../data/fallbackData';
 import type { AnalyticsSummary } from '../types';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -31,17 +32,7 @@ const BAR_COLORS = ['#3b82f6', '#60a5fa', '#a78bfa', '#f472b6'];
 export function Analytics() {
   const analytics = useApi<AnalyticsSummary>(
     () => api.analytics(),
-    {
-      disruptions_over_time: [],
-      state_accessibility: [],
-      weather_risk_by_state: [],
-      delivery_success_rate: [],
-      average_travel_time: [],
-      risk_distribution: [],
-      incident_types: [],
-      critical_supply_requests: [],
-      active_incidents: 0,
-    },
+    demoAnalytics,
     [],
   );
   const [stateFilter, setStateFilter] = useState<string>('All');
@@ -57,6 +48,13 @@ export function Analytics() {
         <div>
           <h2 className="text-xl font-bold text-slate-900">Analytics</h2>
           <p className="text-sm text-slate-400">Regional logistics & accessibility intelligence.</p>
+          {analytics.source === 'offline' && (
+            <div className="mt-2" data-testid="analytics-offline-note">
+              <Badge tone="orange" pulse>
+                Offline demo data — live API unreachable
+              </Badge>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-1.5">
           <button onClick={() => setStateFilter('All')} className={cls('rounded-full border px-3 py-2.5 text-xs', stateFilter === 'All' ? 'border-accent-500 bg-accent-600/20 text-accent-700' : 'border-line bg-base-800 text-slate-600')}>All</button>

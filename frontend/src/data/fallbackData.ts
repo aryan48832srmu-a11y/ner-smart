@@ -6,7 +6,15 @@
  * live weather service; this file is only a resilient offline fallback.
  */
 
-import type { DashboardSummary, Road, Incident, Alert, LogisticsSummary, Meta } from '../types';
+import type {
+  DashboardSummary,
+  Road,
+  Incident,
+  Alert,
+  LogisticsSummary,
+  Meta,
+  AnalyticsSummary,
+} from '../types';
 
 export const DEMO_SOURCE = 'Offline cached data';
 
@@ -342,6 +350,84 @@ export const demoLogistics: LogisticsSummary = {
     { id: 'h2', name: 'GMCH Guwahati', city: 'Guwahati', state: 'Assam', lat: 26.147, lng: 91.731, beds: 1200, status: 'operational' },
   ],
   readiness_pct: 74,
+};
+
+/**
+ * Analytics fallback used when the API is unreachable.
+ *
+ * Empty arrays render blank charts, which looks like a broken page. These are
+ * representative NER figures (matching the shape of `/api/analytics`) so every
+ * graph stays readable and the offline banner explains the data source.
+ */
+export const demoAnalytics: AnalyticsSummary = {
+  disruptions_over_time: [
+    { label: 'Week 1', value: 3 },
+    { label: 'Week 2', value: 5 },
+    { label: 'Week 3', value: 4 },
+    { label: 'Week 4', value: 6 },
+    { label: 'Week 5', value: 3 },
+    { label: 'Week 6', value: 7 },
+    { label: 'Week 7', value: 5 },
+    { label: 'This week', value: 8 },
+  ],
+  state_accessibility: [
+    { state: 'Assam', accessibility: 87, incidents: 0, high_risk_routes: 0, deliveries: 0, risk: 'Low' },
+    { state: 'Arunachal Pradesh', accessibility: 60, incidents: 2, high_risk_routes: 3, deliveries: 1, risk: 'Medium' },
+    { state: 'Manipur', accessibility: 81, incidents: 1, high_risk_routes: 0, deliveries: 1, risk: 'Low' },
+    { state: 'Meghalaya', accessibility: 80, incidents: 1, high_risk_routes: 0, deliveries: 0, risk: 'Low' },
+    { state: 'Mizoram', accessibility: 26, incidents: 1, high_risk_routes: 2, deliveries: 1, risk: 'High' },
+    { state: 'Nagaland', accessibility: 61, incidents: 1, high_risk_routes: 1, deliveries: 1, risk: 'Medium' },
+    { state: 'Sikkim', accessibility: 66, incidents: 1, high_risk_routes: 0, deliveries: 1, risk: 'Medium' },
+    { state: 'Tripura', accessibility: 82, incidents: 0, high_risk_routes: 0, deliveries: 0, risk: 'Low' },
+  ],
+  weather_risk_by_state: [
+    { state: 'Assam', risk: 84 },
+    { state: 'Arunachal Pradesh', risk: 64 },
+    { state: 'Manipur', risk: 65 },
+    { state: 'Meghalaya', risk: 63 },
+    { state: 'Mizoram', risk: 52 },
+    { state: 'Nagaland', risk: 57 },
+    { state: 'Sikkim', risk: 46 },
+    { state: 'Tripura', risk: 47 },
+  ],
+  delivery_success_rate: [
+    { label: 'Jun', value: 86 },
+    { label: 'Jul', value: 88 },
+    { label: 'Aug', value: 91 },
+    { label: 'Sep', value: 89 },
+    { label: 'Oct', value: 93 },
+    { label: 'Nov', value: 90 },
+  ],
+  average_travel_time: [
+    { label: 'Guwahati', value: 6.8 },
+    { label: 'Shillong', value: 5.2 },
+    { label: 'Aizawl', value: 8.4 },
+    { label: 'Imphal', value: 7.1 },
+    { label: 'Gangtok', value: 9.2 },
+    { label: 'Kohima', value: 6.5 },
+  ],
+  risk_distribution: [
+    { name: 'Low', value: 21 },
+    { name: 'Medium', value: 10 },
+    { name: 'High', value: 5 },
+    { name: 'Critical', value: 1 },
+  ],
+  incident_types: [
+    { name: 'Landslide', value: 2 },
+    { name: 'Flood', value: 2 },
+    { name: 'Heavy Snow', value: 1 },
+    { name: 'Accident', value: 1 },
+    { name: 'Bridge Damage', value: 1 },
+    { name: 'Road Damage', value: 1 },
+  ],
+  critical_supply_requests: [
+    { destination: 'Tawang', cargo: 'Medicines', priority: 'CRITICAL', eta: 2 },
+    { destination: 'Mokokchung', cargo: 'Food', priority: 'HIGH', eta: 3 },
+    { destination: 'Aizawl', cargo: 'Construction Material', priority: 'NORMAL', eta: 5 },
+    { destination: 'Gangtok', cargo: 'Medicines', priority: 'HIGH', eta: 1 },
+    { destination: 'Senapati', cargo: 'Food', priority: 'CRITICAL', eta: 2 },
+  ],
+  active_incidents: 7,
 };
 
 export const demoMeta: Meta = {
