@@ -3,9 +3,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "NER-SMART"
+    APP_NAME: str = "NEXUS"
     APP_ENV: str = "production"
-    APP_VERSION: str = "1.2.1"
+    APP_VERSION: str = "1.3.0"
     DEBUG: bool = False
 
     # Comma-separated origins. "*" allows any origin, which is needed when the

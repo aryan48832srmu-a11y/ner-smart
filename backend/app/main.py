@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="NER-SMART — AI Logistics & Accessibility Intelligence Platform",
+    title="NEXUS — AI Logistics & Accessibility Intelligence Platform",
     description="Logistics and accessibility intelligence for India's North Eastern Region.",
     version=settings.APP_VERSION,
     lifespan=lifespan,
@@ -81,7 +81,7 @@ def root():
         "version": settings.APP_VERSION,
         "mode": "live",
         "weather": "live" if settings.live_weather_enabled else "simulated",
-        "message": "NER-SMART API. See /docs for interactive documentation.",
+        "message": "NEXUS API. See /docs for interactive documentation.",
     }
 
 

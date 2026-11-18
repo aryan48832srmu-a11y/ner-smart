@@ -1,4 +1,4 @@
-# NER-SMART — Render Blueprint
+# NEXUS - Render Blueprint
 # Deploys the single-service Docker image (FastAPI + built React app).
 # Docs: https://render.com/docs/blueprint-spec
 services:

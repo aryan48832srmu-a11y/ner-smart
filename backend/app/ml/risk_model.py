@@ -1,5 +1,5 @@
 """
-NER-SMART AI Risk Engine.
+NEXUS AI Risk Engine.
 
 Disruption/risk prediction service.
 

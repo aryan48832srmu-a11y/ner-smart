@@ -1,5 +1,5 @@
 /**
- * Basemap definitions for the NER-SMART maps.
+ * Basemap definitions for the NEXUS maps.
  *
  * "Map" is a clean CARTO Voyager basemap that suits the light dashboard. It
  * still renders the OpenStreetMap data, with crisper retina tiles and softer
@@ -53,7 +53,7 @@ export const MAP_STYLES: Record<MapStyleId, MapStyle> = {
 
 export const MAP_STYLE_ORDER: MapStyleId[] = ['voyager', 'streets', 'dark'];
 
-const STORAGE_KEY = 'ner-smart-map-style';
+const STORAGE_KEY = 'nexus-map-style';
 
 export function loadMapStyle(): MapStyleId {
   try {

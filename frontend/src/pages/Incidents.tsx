@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import { api } from '../services/api';
 import { useApi } from '../hooks/useApi';
 import { demoMeta, demoIncidents } from '../data/fallbackData';
+import { INDIAN_STATES } from '../data/indianStates';
 import type { Meta, Incident } from '../types';
 import { matchState, nearestCity } from '../utils/geo';
 import { Card } from '../components/ui/Card';
@@ -67,7 +68,9 @@ export function Incidents() {
   const [mapTarget, setMapTarget] = useState<{ lat: number; lng: number; ts: number } | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const states = meta.data.states;
+  // All Indian states/UTs plus any extra values supplied by the API, deduped.
+  // Geocoding uses the same list to match a location's state.
+  const states = [...new Set([...INDIAN_STATES, ...meta.data.states])];
 
   const suggestLocation = (name: string) => {
     const city = meta.data.cities.find((c) => c.name.toLowerCase() === name.toLowerCase());
@@ -276,7 +279,7 @@ export function Incidents() {
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-400">State</label>
             <select value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="w-full rounded-lg border border-line bg-base-900 px-3 py-2 text-sm text-slate-800 outline-none focus:border-accent-500">
-              {states.map((s) => <option key={s}>{s}</option>)}
+              {states.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 

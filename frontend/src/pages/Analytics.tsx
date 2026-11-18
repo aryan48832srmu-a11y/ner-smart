@@ -82,7 +82,7 @@ export function Analytics() {
                 <StateStat label="Overall Risk" value={selectedState.risk} tone={selectedState.risk === 'High' ? 'red' : selectedState.risk === 'Medium' ? 'yellow' : 'green'} />
               </div>
               <div className="px-4 pb-4">
-                <Badge tone="violet">Data source: NER-SMART operational dataset</Badge>
+                <Badge tone="violet">Data source: NEXUS operational dataset</Badge>
               </div>
             </Card>
           )}

@@ -1,4 +1,4 @@
-"""API routes for NER-SMART backend."""
+"""API routes for NEXUS backend."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api")
 def health():
     return {
         "status": "ok",
-        "app": "NER-SMART",
+        "app": "NEXUS",
         "mode": "live",
         "weather": "live" if settings.live_weather_enabled else "simulated",
     }

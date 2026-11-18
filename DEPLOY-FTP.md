@@ -18,11 +18,11 @@ Visitor ──► yourname.infinityfreeapp.com   (HTML/CSS/JS uploaded by FileZi
 ## Phase 0 — Collect these first
 
 - [ ] InfinityFree account (free, no card): <https://www.infinityfree.com>
-- [ ] A free subdomain chosen during signup, e.g. `ner-smart.rf.gd`
+- [ ] A free subdomain chosen during signup, e.g. `nexus.rf.gd`
 - [ ] FileZilla Client: <https://filezilla-project.org/download.php?type=client>
 - [ ] Access to <https://dashboard.render.com> (same GitHub account)
 - [ ] This folder: `D:\SIH project\frontend\dist-ftp`
-      (or the zip `D:\SIH project\ner-smart-website.zip`)
+      (or the zip `D:\SIH project\nexus-website.zip`)
 
 ---
 
@@ -42,7 +42,7 @@ if the site still shows an *"offline cached data"* banner after loading.
 Verify from PowerShell (replace the URL with your InfinityFree address):
 
 ```powershell
-curl.exe -s -D - -o NUL -H "Origin: http://ner-smart.rf.gd" `
+curl.exe -s -D - -o NUL -H "Origin: http://nexus.rf.gd" `
   https://ner-smart-vujs.onrender.com/api/dashboard
 ```
 
@@ -55,8 +55,8 @@ environment variable was not saved — repeat the step.
 
 - [ ] Sign in at <https://dash.infinityfree.com>
 - [ ] **Create Account** → choose **Free Subdomain** (or use a domain you own)
-- [ ] Pick a name, e.g. `ner-smart` → your site becomes
-      `http://ner-smart.rf.gd` (availability varies by extension)
+- [ ] Pick a name, e.g. `nexus` → your site becomes
+      `http://nexus.rf.gd` (availability varies by extension)
 - [ ] Select the **free hosting** plan and create the account
 - [ ] Wait until the account shows **Active** (usually instant, up to 15 min)
 

@@ -1,4 +1,4 @@
-# NER-SMART static frontend (Apache / LiteSpeed shared hosting)
+# NEXUS static frontend (Apache / LiteSpeed shared hosting)
 #
 # Serve index.html for client-side routes such as /route-planner and
 # /logistics, while returning real 404s for missing assets.

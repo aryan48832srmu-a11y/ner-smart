@@ -1,8 +1,9 @@
-# NER-SMART
+# NEXUS
 
 **AI-Powered Logistics & Accessibility Intelligence Platform for the North Eastern Region (NER)**
 
 Internal **Smart India Hackathon 2026** prototype — demo-ready build.
+Previously branded **NER-SMART**; the live URLs and repository keep their old names so existing links stay valid.
 
 > [!TIP]
 > **Live demo (mobile friendly):** https://ner-smart-vujs.onrender.com
@@ -16,7 +17,7 @@ Internal **Smart India Hackathon 2026** prototype — demo-ready build.
 
 ## Overview
 
-NER-SMART is a full-stack logistics & accessibility intelligence platform for India's North
+NEXUS is a full-stack logistics & accessibility intelligence platform for India's North
 Eastern Region (Assam, Arunachal Pradesh, Manipur, Meghalaya, Mizoram, Nagaland, Sikkim, Tripura).
 It combines an interactive GIS map, an AI/ML disruption-risk engine, a transparent route-scoring
 planner, incident reporting with simulated CV image analysis, a logistics command dashboard and an
@@ -63,7 +64,7 @@ government-certified — every AI prediction is clearly labelled **"AI Predictio
 ## Project Structure
 
 ```
-NER-SMART/
+NEXUS/
 ├── frontend/                  # React + Vite + TypeScript app
 │   ├── src/
 │   │   ├── components/        # reusable UI + map components
@@ -166,8 +167,8 @@ any other path falls back to the SPA (deep links like `/route-planner` work).
 ### Docker
 
 ```bash
-docker build -t ner-smart .
-docker run --rm -p 8000:8000 -e OPENWEATHER_API_KEY=... ner-smart
+docker build -t nexus .
+docker run --rm -p 8000:8000 -e OPENWEATHER_API_KEY=... nexus
 ```
 
 The multi-stage build compiles the frontend with Node and ships only the

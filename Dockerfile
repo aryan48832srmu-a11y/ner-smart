@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------------------------------------------------------------------------
-# NER-SMART single-service image: builds the Vite frontend, then serves the
+# NEXUS single-service image: builds the Vite frontend, then serves the
 # static bundle and the FastAPI API from one process on one port.
 # ---------------------------------------------------------------------------
 

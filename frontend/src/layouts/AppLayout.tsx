@@ -54,7 +54,7 @@ export function AppLayout() {
             <Radio className="h-5 w-5" />
           </div>
           <div className="hidden lg:block">
-            <p className="text-sm font-extrabold tracking-wide text-slate-900">NER-SMART</p>
+            <p className="text-sm font-extrabold tracking-wide text-slate-900">NEXUS</p>
             <p className="text-[10px] leading-tight text-slate-400">Logistics & Accessibility Intelligence</p>
           </div>
         </div>
@@ -105,7 +105,7 @@ export function AppLayout() {
                   <Radio className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-extrabold tracking-wide text-slate-900">NER-SMART</p>
+                  <p className="text-sm font-extrabold tracking-wide text-slate-900">NEXUS</p>
                   <p className="text-[10px] leading-tight text-slate-400">Logistics & Accessibility</p>
                 </div>
               </div>
