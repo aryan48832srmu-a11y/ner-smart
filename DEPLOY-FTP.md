@@ -111,7 +111,7 @@ Do **not** upload the whole project. Only these files belong on the web host.
 - [ ] **Analytics** page shows all 7 charts with bars/lines. If an amber
       *"Offline demo data"* badge appears instead, repeat **Phase 1**
 - [ ] The map shows roads, city dots and incidents; try the **Map style** dropdown
-      (Map, Streets, Satellite, Hybrid, Terrain, Light, Dark, Humanitarian)
+      (Map, Streets, Satellite, Hybrid, World Topo, World Street, Terrain, Light, Dark, Humanitarian)
       at the top-right of the map
 - [ ] **Route Planner → Find Safest Route** returns 3 routes and recommends Route A
 - [ ] Reload the page while on `/logistics` — it must still load (that proves
@@ -142,7 +142,7 @@ If your plan offers **SSL/TLS** in vPanel, enable the free certificate and use
 | Blank white page | Files uploaded to the wrong folder, or `assets` missing | Upload everything into `htdocs` itself, not a subfolder |
 | Page loads, banner "Live API unreachable — offline cached data" | CORS not enabled, or Render is cold | Repeat **Phase 1**; wait 60 s and reload |
 | 404 when refreshing `/logistics` or `/route-planner` | `.htaccess` missing/ignored | Re-upload `.htaccess`; enable "Force hidden files"; on nginx hosts use the SPA-fallback setting |
-| Map area blank, rest of UI fine | Tile CDN blocked on your network | The map auto-switches to **Streets** after a few failed tiles; the **Map style** dropdown also lets you switch CDNs manually |
+| Map area blank, rest of UI fine | Tile host blocked on your network | Satellite/Hybrid/World Topo/World Street retry on a backup Esri host, then fall back to **Streets**; the **Map style** dropdown also lets you switch sources manually |
 | "This site can't be reached" | Account still pending or domain not added | Wait for **Active**, then reload |
 | 530 / 403 on FTP login | Wrong username or password | Copy them again from vPanel → FTP Accounts |
 | Upload stops at 0% repeatedly | Passive mode issue | FileZilla → Edit → Settings → Connection → FTP → Passive; or try port 21 with "Require explicit FTP over TLS" off |

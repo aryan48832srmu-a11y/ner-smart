@@ -5,6 +5,10 @@
  * key used by the project is `OPENWEATHER_API_KEY`, which powers the weather
  * panel on the backend — it has nothing to do with map tiles.
  *
+ * Every style has a backup host where the provider offers one. If the primary
+ * tile host is blocked on a network, the map switches hosts before it ever
+ * gives up and falls back to Streets.
+ *
  * All styles work with the same Leaflet map, so switching is instant and the
  * choice is remembered in localStorage.
  */
@@ -13,6 +17,8 @@ export type MapStyleId =
   | 'streets'
   | 'satellite'
   | 'hybrid'
+  | 'esriTopo'
+  | 'esriStreet'
   | 'terrain'
   | 'light'
   | 'dark'
@@ -28,8 +34,11 @@ export interface MapStyle {
   retina: boolean;
   /** Maximum zoom supported by the tile service. */
   maxZoom: number;
+  /** Alternate hosts tried in order when the primary host fails. */
+  fallbackUrls?: string[];
   /** Optional transparent label layer drawn above the base tiles (Hybrid). */
   overlayUrl?: string;
+  overlayFallbackUrls?: string[];
   overlayMaxZoom?: number;
 }
 
@@ -39,10 +48,22 @@ const CARTO_ATTRIBUTION =
   `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>`;
 const ESRI_ATTRIBUTION =
   'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noreferrer">Esri</a>, Maxar, Earthstar Geographics';
+const ESRI_STREET_ATTRIBUTION =
+  'Tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noreferrer">Esri</a>, HERE, Garmin, FAO, NOAA, USGS, OpenStreetMap contributors';
 const TOPO_ATTRIBUTION =
   `${OSM_ATTRIBUTION}, SRTM | <a href="https://opentopomap.org" target="_blank" rel="noreferrer">OpenTopoMap</a>`;
 const HOT_ATTRIBUTION =
   `${OSM_ATTRIBUTION} | <a href="https://www.hotosm.org" target="_blank" rel="noreferrer">HOT</a>`;
+
+/** Esri exposes the same imagery on two hosts; either can be blocked by a firewall. */
+const ESRI_IMAGERY_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ESRI_IMAGERY_BACKUP =
+  'https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+const ESRI_LABELS_URL =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
+const ESRI_LABELS_BACKUP =
+  'https://services.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}';
 
 export const MAP_STYLES: Record<MapStyleId, MapStyle> = {
   voyager: {
@@ -66,7 +87,8 @@ export const MAP_STYLES: Record<MapStyleId, MapStyle> = {
   satellite: {
     id: 'satellite',
     label: 'Satellite',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    url: ESRI_IMAGERY_URL,
+    fallbackUrls: [ESRI_IMAGERY_BACKUP],
     attribution: ESRI_ATTRIBUTION,
     subdomains: '',
     retina: false,
@@ -75,11 +97,38 @@ export const MAP_STYLES: Record<MapStyleId, MapStyle> = {
   hybrid: {
     id: 'hybrid',
     label: 'Hybrid',
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    overlayUrl:
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    url: ESRI_IMAGERY_URL,
+    fallbackUrls: [ESRI_IMAGERY_BACKUP],
+    overlayUrl: ESRI_LABELS_URL,
+    overlayFallbackUrls: [ESRI_LABELS_BACKUP],
     overlayMaxZoom: 19,
     attribution: `${ESRI_ATTRIBUTION} | Boundaries & places: Esri`,
+    subdomains: '',
+    retina: false,
+    maxZoom: 19,
+  },
+  // Newest Esri global basemaps — higher-detail labels/contours than the
+  // OpenTopoMap and OSM alternatives, served by the same resilient Esri hosts.
+  esriTopo: {
+    id: 'esriTopo',
+    label: 'World Topo',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    fallbackUrls: [
+      'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    ],
+    attribution: ESRI_STREET_ATTRIBUTION,
+    subdomains: '',
+    retina: false,
+    maxZoom: 19,
+  },
+  esriStreet: {
+    id: 'esriStreet',
+    label: 'World Street',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    fallbackUrls: [
+      'https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    ],
+    attribution: ESRI_STREET_ATTRIBUTION,
     subdomains: '',
     retina: false,
     maxZoom: 19,
@@ -127,6 +176,8 @@ export const MAP_STYLE_ORDER: MapStyleId[] = [
   'streets',
   'satellite',
   'hybrid',
+  'esriTopo',
+  'esriStreet',
   'terrain',
   'light',
   'dark',

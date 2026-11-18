@@ -134,24 +134,40 @@ export function NERMap({
   const hasRoutes = (routeLayers?.length ?? 0) > 0;
   const [styleId, setStyleId] = useState<MapStyleId>(loadMapStyle);
   const mapStyle = MAP_STYLES[styleId];
+  const [sourceIndex, setSourceIndex] = useState(0);
   const tileErrorCount = useRef(0);
+
+  // Esri serves the same imagery on two hosts. Treat them as ordered sources:
+  // try the backup host before abandoning the selected style.
+  const sources = [mapStyle.url, ...(mapStyle.fallbackUrls ?? [])];
+  const overlaySources = mapStyle.overlayUrl
+    ? [mapStyle.overlayUrl, ...(mapStyle.overlayFallbackUrls ?? [])]
+    : [];
+  const activeSource = sources[Math.min(sourceIndex, sources.length - 1)];
+  const activeOverlay = overlaySources[Math.min(sourceIndex, overlaySources.length - 1)];
 
   const chooseStyle = (id: MapStyleId) => {
     setStyleId(id);
     saveMapStyle(id);
   };
 
-  // Reset the failure counter whenever the basemap changes.
+  // Reset the source and failure counter whenever the basemap changes.
   useEffect(() => {
     tileErrorCount.current = 0;
+    setSourceIndex(0);
   }, [styleId]);
 
-  // Some networks/firewalls block a tile CDN entirely. If several tiles fail,
-  // fall back to the OSM "Streets" layer (a different CDN) so the map is never
-  // a blank rectangle. The user's saved preference is left untouched.
+  // Some networks/firewalls block a tile host entirely. After a few failed
+  // tiles, switch to the style's backup host; only if that also fails do we
+  // fall back to the OSM "Streets" layer. The saved preference is untouched.
   const handleTileError = () => {
     tileErrorCount.current += 1;
-    if (tileErrorCount.current >= 3 && styleId !== 'streets') {
+    if (tileErrorCount.current < 3) return;
+
+    if (sourceIndex < sources.length - 1) {
+      tileErrorCount.current = 0;
+      setSourceIndex((index) => index + 1);
+    } else if (styleId !== 'streets') {
       setStyleId('streets');
     }
   };
@@ -168,8 +184,8 @@ export function NERMap({
         style={{ height: '100%', minHeight: 260, width: '100%', zIndex: 0 }}
       >
         <TileLayer
-          key={mapStyle.id}
-          url={mapStyle.url}
+          key={`${mapStyle.id}-source-${sourceIndex}`}
+          url={activeSource}
           attribution={mapStyle.attribution}
           subdomains={mapStyle.subdomains}
           maxZoom={mapStyle.maxZoom}
@@ -178,10 +194,10 @@ export function NERMap({
         />
 
         {/* Hybrid = satellite imagery + a transparent labels/boundaries layer. */}
-        {mapStyle.overlayUrl && (
+        {activeOverlay && (
           <TileLayer
-            key={`${mapStyle.id}-overlay`}
-            url={mapStyle.overlayUrl}
+            key={`${mapStyle.id}-overlay-${sourceIndex}`}
+            url={activeOverlay}
             subdomains={mapStyle.subdomains}
             maxZoom={mapStyle.overlayMaxZoom ?? mapStyle.maxZoom}
             detectRetina={mapStyle.retina}
