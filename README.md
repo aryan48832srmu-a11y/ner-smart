@@ -32,7 +32,7 @@ government-certified — every AI prediction is clearly labelled **"AI Predictio
 ## Features
 
 - **Interactive GIS Map** of the NER (Leaflet + OpenStreetMap)
-  - Three basemaps — **Map**, **Streets** and **Dark** — with retina tiles, scale bar and saved preference
+  - Eight basemaps — **Map, Streets, Satellite, Hybrid, Terrain, Light, Dark, Humanitarian** — with retina tiles where supported, scale bar and saved preference. No map API key needed (public tile services).
   - Road segments colored by status (green = accessible, yellow = risky, orange = severely risky, red = blocked)
   - City / capital / town markers, warehouse & hospital markers, incident markers
   - Click a road to open detailed **Road Details** (accessibility, weather/landslide/disruption risk, 12-hour AI forecast, alternatives)

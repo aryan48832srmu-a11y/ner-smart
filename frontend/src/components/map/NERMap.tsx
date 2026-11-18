@@ -172,10 +172,21 @@ export function NERMap({
           url={mapStyle.url}
           attribution={mapStyle.attribution}
           subdomains={mapStyle.subdomains}
-          maxZoom={19}
+          maxZoom={mapStyle.maxZoom}
           detectRetina={mapStyle.retina}
           eventHandlers={{ tileerror: handleTileError }}
         />
+
+        {/* Hybrid = satellite imagery + a transparent labels/boundaries layer. */}
+        {mapStyle.overlayUrl && (
+          <TileLayer
+            key={`${mapStyle.id}-overlay`}
+            url={mapStyle.overlayUrl}
+            subdomains={mapStyle.subdomains}
+            maxZoom={mapStyle.overlayMaxZoom ?? mapStyle.maxZoom}
+            detectRetina={mapStyle.retina}
+          />
+        )}
 
         <ScaleControl position="bottomright" imperial={false} />
 
@@ -303,31 +314,27 @@ export function NERMap({
         ))}
       </MapContainer>
 
-      {/* Basemap switcher */}
+      {/* Basemap switcher — a dropdown fits all eight styles on a phone. */}
       <div
-        className="absolute right-2 top-2 z-[500] flex items-center gap-0.5 rounded-lg border border-line bg-base-900/95 p-0.5 shadow-soft backdrop-blur sm:right-3 sm:top-3"
-        role="group"
-        aria-label="Map style"
+        className={`absolute right-2 top-2 z-[500] flex items-center gap-1.5 rounded-lg border px-2 py-1 shadow-soft backdrop-blur sm:right-3 sm:top-3 ${
+          styleId === 'dark'
+            ? 'border-slate-600 bg-slate-900/95 text-slate-100'
+            : 'border-line bg-base-900/95 text-slate-700'
+        }`}
       >
-        {MAP_STYLE_ORDER.map((id) => {
-          const option = MAP_STYLES[id];
-          const active = id === styleId;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => chooseStyle(id)}
-              aria-pressed={active}
-              className={`rounded-md px-2.5 py-2 text-[11px] font-semibold transition-colors sm:py-1.5 ${
-                active
-                  ? 'bg-accent-600 text-white shadow-sm'
-                  : 'text-slate-500 hover:bg-base-700 hover:text-slate-700'
-              }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
+        <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">Map</span>
+        <select
+          aria-label="Map style"
+          value={styleId}
+          onChange={(e) => chooseStyle(e.target.value as MapStyleId)}
+          className="max-w-[128px] cursor-pointer bg-transparent py-0.5 text-xs font-semibold outline-none"
+        >
+          {MAP_STYLE_ORDER.map((id) => (
+            <option key={id} value={id}>
+              {MAP_STYLES[id].label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Legend */}
