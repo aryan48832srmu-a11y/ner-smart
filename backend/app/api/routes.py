@@ -1,4 +1,4 @@
-"""API routes for NEXUS backend."""
+"""API routes for NDRMS backend."""
 
 from __future__ import annotations
 
@@ -6,14 +6,20 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.config import settings
 from app.schemas.incident import IncidentCreate, IncidentCreateResponse
-from app.services import aggregator, geocode_service, route_engine
+from app.services import (
+    aggregator,
+    geocode_service,
+    live_incident_service,
+    route_engine,
+    routing_service,
+)
 from app.services.forecast_service import forecast_road
 from app.services.image_analyzer import get_analyzer
 from app.services.store import get_store
 from app.services.weather_service import get_weather
 from app.ml.risk_model import get_predictor
 from app.models.schemas import RiskPredictionRequest
-from app.models.schemas import RouteOptimizeRequest
+from app.models.schemas import RouteOptimizeRequest, RoutePlanRequest
 from app.models.schemas import WarehouseCreate, WarehouseUpdate
 
 router = APIRouter(prefix="/api")
@@ -23,7 +29,7 @@ router = APIRouter(prefix="/api")
 def health():
     return {
         "status": "ok",
-        "app": "NEXUS",
+        "app": "NDRMS",
         "mode": "live",
         "weather": "live" if settings.live_weather_enabled else "simulated",
     }
@@ -49,8 +55,33 @@ def road_detail(road_id: str):
 
 @router.get("/incidents")
 def incidents():
-    store = get_store()
-    return store.incidents_all()
+    """Real incidents: live web feeds + user field reports (no seeded demos)."""
+    return live_incident_service.all_incidents()
+
+
+@router.get("/incidents/live")
+def live_incidents(
+    region: str = Query("all", pattern="^(all|ner|india)$"),
+    limit: int = Query(60, ge=1, le=200),
+    refresh: bool = False,
+):
+    """Incidents pulled from public alert feeds (GDACS, USGS)."""
+    items = live_incident_service.live_incidents(force=refresh)
+    if region == "ner":
+        items = [i for i in items if i.get("region") == "NER"]
+    elif region == "india":
+        items = [i for i in items if i.get("region") != "NER"]
+    return {
+        "incidents": items[:limit],
+        "count": len(items),
+        "sources": sorted({i.get("source", "Unknown") for i in items}),
+        "feed_status": live_incident_service.feed_status(),
+    }
+
+
+@router.get("/incidents/feed-status")
+def incident_feed_status():
+    return live_incident_service.feed_status()
 
 
 @router.post("/incidents")
@@ -108,6 +139,27 @@ def routes():
 
     cities = [{"name": k, **v} for k, v in CITIES.items()]
     return {"roads": aggregator.roads(), "cities": cities}
+
+
+@router.post("/routes/plan")
+def plan_route(payload: RoutePlanRequest):
+    """Real-road routing with multiple providers and an offline fallback.
+
+    Always returns at least one drawable route: public OSRM servers are tried
+    first, then the built-in road graph, then a labelled direct connection.
+    """
+    return routing_service.plan_route(
+        origin_label=payload.origin,
+        destination_label=payload.destination,
+        mode=payload.mode,
+        origin_lat=payload.origin_lat,
+        origin_lng=payload.origin_lng,
+        destination_lat=payload.destination_lat,
+        destination_lng=payload.destination_lng,
+        cargo_type=payload.cargo_type,
+        priority=payload.priority,
+        vehicle=payload.vehicle,
+    )
 
 
 @router.post("/routes/optimize")

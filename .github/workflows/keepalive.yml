@@ -1,4 +1,4 @@
-# Keeps the NEXUS demo instance on Render's free plan awake.
+# Keeps the NDRMS demo instance on Render's free plan awake.
 #
 # Render free web services spin down after ~15 minutes without traffic, and the
 # next visitor waits 30-60s for a cold start. A request every 10 minutes keeps
@@ -43,5 +43,5 @@ jobs:
             fi
             sleep 20
           done
-          echo "::error::NEXUS health check did not return 200"
+          echo "::error::NDRMS health check did not return 200"
           exit 1

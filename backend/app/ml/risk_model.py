@@ -1,5 +1,5 @@
 """
-NEXUS AI Risk Engine.
+NDRMS AI Risk Engine.
 
 Disruption/risk prediction service.
 

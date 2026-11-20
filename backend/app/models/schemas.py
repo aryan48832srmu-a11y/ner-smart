@@ -106,6 +106,21 @@ class RouteOptimizeRequest(BaseModel):
     vehicle: str = "Heavy Truck"
 
 
+class RoutePlanRequest(BaseModel):
+    """Real-road routing request used by the rebuilt route planner."""
+
+    origin: str
+    destination: str
+    origin_lat: float | None = None
+    origin_lng: float | None = None
+    destination_lat: float | None = None
+    destination_lng: float | None = None
+    mode: str = "safest"
+    cargo_type: str = "General"
+    priority: str = "Normal"
+    vehicle: str = "Heavy Truck"
+
+
 class RiskPrediction(BaseModel):
     risk_probability: float
     risk_level: str

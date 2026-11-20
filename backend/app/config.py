@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "NEXUS"
+    APP_NAME: str = "NDRMS"
     APP_ENV: str = "production"
     APP_VERSION: str = "1.3.0"
     DEBUG: bool = False
@@ -35,6 +35,23 @@ class Settings(BaseSettings):
     # location" in the incident form. Proxied through the API so the browser
     # never hits Nominatim directly.
     GEOCODE_TIMEOUT_SECONDS: float = 6.0
+
+    # ------------------------------------------------------------------
+    # Real-road routing (public OSRM servers, no API key required).
+    # Providers are tried in order; if all fail the built-in road graph and
+    # then a direct connection are used, so planning never returns an error.
+    # ------------------------------------------------------------------
+    ROUTING_TIMEOUT_SECONDS: float = 8.0
+    ROUTING_CACHE_TTL_SECONDS: int = 600
+    ROUTING_PROVIDERS: str = "osrm-public,osrm-de"
+
+    # ------------------------------------------------------------------
+    # Real incidents from public web feeds (GDACS + USGS). No API key.
+    # Cached to respect feed usage policies.
+    # ------------------------------------------------------------------
+    LIVE_INCIDENTS_ENABLED: bool = True
+    LIVE_INCIDENTS_CACHE_TTL_SECONDS: int = 600
+    LIVE_INCIDENTS_TIMEOUT_SECONDS: float = 10.0
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

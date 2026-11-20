@@ -59,7 +59,7 @@ def test_reverse_uses_http_and_caches(monkeypatch):
     assert first is not None and first["label"] == "Bomdila, West Kameng"
     assert second == first
     assert len(calls) == 1  # second call served from cache
-    assert calls[0][2]["User-Agent"].startswith("NEXUS")
+    assert calls[0][2]["User-Agent"].startswith("NDRMS")
 
 
 def test_reverse_failure_returns_none(monkeypatch):

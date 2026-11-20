@@ -35,6 +35,12 @@ export interface Incident {
   ai_risk?: number;
   image_url?: string;
   ai_analysis?: AiAnalysis;
+  /** Set on events pulled from public feeds (GDACS / USGS). */
+  is_live?: boolean;
+  source?: string;
+  source_url?: string;
+  title?: string;
+  region?: string;
 }
 
 export interface AiAnalysis {
@@ -121,6 +127,103 @@ export interface RouteEndpointInfo {
   lng: number | null;
   /** Distance from the requested point to `node`, in kilometres. */
   snap_km: number;
+}
+
+/** Response from /api/incidents/live — real public-feed events, never demos. */
+export interface LiveIncidentFeed {
+  incidents: LiveIncident[];
+  count: number;
+  sources: string[];
+  feed_status: {
+    enabled: boolean;
+    sources: string[];
+    count: number;
+    cache_ttl_seconds: number;
+    fetched_at: string;
+  };
+}
+
+export interface LiveIncident {
+  id: string;
+  type: string;
+  severity: string;
+  title: string;
+  description: string;
+  location_name: string;
+  state: string;
+  country: string;
+  lat: number;
+  lng: number;
+  source: 'GDACS' | 'USGS' | string;
+  source_url: string;
+  reported_at: string;
+  reported_minutes_ago: number;
+  status: string;
+  region: 'NER' | 'India & neighbours' | string;
+  is_live: true;
+  magnitude?: number;
+  alert_level?: string;
+}
+
+/** Result from the rebuilt real-road route planner (/api/routes/plan). */
+export interface RoutePlanResult {
+  origin: { label: string; lat: number; lng: number };
+  destination: { label: string; lat: number; lng: number };
+  mode: 'safest' | 'fastest' | 'shortest';
+  mode_label: string;
+  source: string;
+  source_label: string;
+  /** True when geometry came from a live OSRM road server. */
+  live: boolean;
+  routes: PlannedRoute[];
+  recommended: PlannedRoute | null;
+  explanation: string;
+  risk_overlay: {
+    incidents: NearbyIncident[];
+    radius_km: number;
+  };
+  cargo_type: string;
+  priority: string;
+  vehicle: string;
+  warnings: string[];
+  fetched_at: string;
+  error: string | null;
+}
+
+export interface PlannedRoute {
+  id: string;
+  label: string;
+  /** [lat, lng] pairs describing the full drivable road geometry. */
+  coordinates: [number, number][];
+  distance_km: number;
+  duration_min: number;
+  eta_display: string;
+  /** 0 = safest, 100 = most risk from nearby reported incidents. */
+  risk_score: number;
+  safety_score: number;
+  risk_level: 'Low' | 'Moderate' | 'High' | 'Critical';
+  incidents_nearby: number;
+  nearby_incidents: NearbyIncident[];
+  steps: RouteStep[];
+  recommended: boolean;
+  tag: string;
+  reason: string;
+}
+
+export interface NearbyIncident {
+  id?: string;
+  lat: number;
+  lng: number;
+  label: string;
+  type: string;
+  severity: string;
+}
+
+export interface RouteStep {
+  instruction: string;
+  road: string;
+  distance_km: number;
+  duration_min: number;
 }
 
 export interface RiskPredictionResult {

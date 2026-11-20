@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -82,7 +82,7 @@ export function Analytics() {
                 <StateStat label="Overall Risk" value={selectedState.risk} tone={selectedState.risk === 'High' ? 'red' : selectedState.risk === 'Medium' ? 'yellow' : 'green'} />
               </div>
               <div className="px-4 pb-4">
-                <Badge tone="violet">Data source: NEXUS operational dataset</Badge>
+                <Badge tone="violet">Data source: NDRMS operational dataset</Badge>
               </div>
             </Card>
           )}

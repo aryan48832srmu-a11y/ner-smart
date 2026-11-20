@@ -1,5 +1,5 @@
 """
-Demo data for the NEXUS prototype.
+Demo data for the NDRMS prototype.
 
 All data here is SIMULATED / DEMO DATA for the internal SIH prototype.
 It is intentionally realistic (real NER locations, roads and weather patterns)

@@ -12,13 +12,23 @@ export function useApi<T>(fetcher: () => Promise<T>, fallback: T, deps: unknown[
   const [source, setSource] = useState<'api' | 'offline'>('api');
   const [version, setVersion] = useState(0);
   const mounted = useRef(true);
+  const silentRefresh = useRef(false);
 
-  const refresh = () => setVersion((v) => v + 1);
+  /**
+   * Re-fetch data. Pass `true` for background polling so the UI keeps showing
+   * the current rows instead of flashing a loading skeleton every few seconds.
+   */
+  const refresh = (silent = false) => {
+    silentRefresh.current = silent;
+    setVersion((v) => v + 1);
+  };
 
   useEffect(() => {
     mounted.current = true;
     let cancelled = false;
-    setLoading(true);
+    const isSilent = silentRefresh.current;
+    silentRefresh.current = false;
+    if (!isSilent) setLoading(true);
     setError(null);
 
     fetcher()

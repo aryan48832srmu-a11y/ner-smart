@@ -1,4 +1,4 @@
-# NEXUS
+# NDRMS
 
 **AI-Powered Logistics & Accessibility Intelligence Platform for the North Eastern Region (NER)**
 
@@ -17,15 +17,19 @@ Previously branded **NER-SMART**; the live URLs and repository keep their old na
 
 ## Overview
 
-NEXUS is a full-stack logistics & accessibility intelligence platform for India's North
+NDRMS is a full-stack logistics & accessibility intelligence platform for India's North
 Eastern Region (Assam, Arunachal Pradesh, Manipur, Meghalaya, Mizoram, Nagaland, Sikkim, Tripura).
-It combines an interactive GIS map, an AI/ML disruption-risk engine, a transparent route-scoring
-planner, incident reporting with simulated CV image analysis, a logistics command dashboard and an
-analytics suite.
+It combines an interactive GIS map, an AI/ML disruption-risk engine, a real-road route planner,
+live public incident feeds, incident reporting with simulated CV image analysis, a logistics command
+dashboard and an analytics suite.
 
-This is an **internal-round prototype**. It runs entirely locally, needs **no external API keys**,
-and uses **simulated / demo data** for reliability. It is **not** production-grade and **not**
-government-certified — every AI prediction is clearly labelled **"AI Prediction (Demo)"**.
+This is an **internal-round prototype**. It needs **no API keys**: routing uses public OSRM road
+servers, live incidents come from GDACS and USGS public feeds, and maps use public raster tiles.
+Roads, facilities and ML predictions are clearly labelled demo/simulated data. Seeded demo incidents
+are excluded from the incident list and dashboard so real web events and field reports are never
+mixed with fabricated incidents. Weather is simulated unless an optional OpenWeatherMap key is set.
+It is **not** production-grade or government-certified — every AI prediction is clearly labelled
+**"AI Prediction (Demo)"**.
 
 ---
 
@@ -36,15 +40,16 @@ government-certified — every AI prediction is clearly labelled **"AI Predictio
   - Road segments colored by status (green = accessible, yellow = risky, orange = severely risky, red = blocked)
   - City / capital / town markers, warehouse & hospital markers, incident markers
   - Click a road to open detailed **Road Details** (accessibility, weather/landslide/disruption risk, 12-hour AI forecast, alternatives)
-- **Dashboard** with live stat cards, an **AI Situation Panel**, risky-route listing, weather warnings and an active-incidents table
-- **Route Intelligence** — transparent route scoring across 3 alternatives with cargo/priority-weighted weights and a clear recommendation rationale
+- **Dashboard** with live stat cards, an **AI Situation Panel**, risky-route listing, weather warnings and an active-incidents table sourced from real feeds plus field reports
+- **Real-Road Route Planner** — drivable OpenStreetMap road geometry from public OSRM servers, with **Safest / Fastest / Shortest** modes, cargo/priority weighting, turn-by-turn steps, incidents-near-route and a clear recommendation rationale. A built-in graph and direct estimate keep route planning working when live providers fail.
 - **AI Risk Engine** — Random Forest-style Gradient Boosting done in `scikit-learn`, trained on synthetic-but-realistic data (`POST /api/predict-risk`)
 - **12-Hour Disruption Forecast** per road
-- **Incident Reporting** — report form, map location picker, image upload and **simulated CV image analysis** (clearly marked as prototype)
+- **Live Incidents** — real, keyless events from **GDACS** (floods, fires, cyclones, droughts, earthquakes) and **USGS** (earthquakes), cached for 10 minutes, with region filters, source links and a live map. No seeded demo incidents are shown.
+- **Incident Reporting** — report form, map location picker, image upload and **simulated CV image analysis** (clearly marked as prototype). A persistent side button opens the form from any public page; all 28 states + 8 UTs are available. Reports auto-refresh on open, on tab focus and every 20 seconds.
 - **Alert Center** — weather, road, flood, landslide, bridge & logistics alerts
 - **Logistics Command** — warehouses, fleet, supply requests and smart delivery prioritisation
 - **Analytics** — time-series and distribution charts (Recharts) with state-wise filtering
-- **Demo Mode** — everything works without external keys; a **DEMO MODE** badge is shown throughout
+- **Keyless fallback mode** — everything works without API keys; simulated/demo labels are shown where data is not real
 
 ---
 
@@ -57,14 +62,15 @@ government-certified — every AI prediction is clearly labelled **"AI Predictio
 | Backend   | Python, FastAPI, Pydantic                                          |
 | Database  | SQLite-compatible (in-memory store by default for the demo)        |
 | AI/ML     | scikit-learn (Gradient Boosting), numpy                            |
-| Routing   | Custom transparent scoring engine (OSRM/GraphHopper-ready)         |
+| Routing   | Public OSRM road services + built-in graph fallback, transparent scoring |
+| Live data | GDACS RSS and USGS FDSN feeds (keyless, proxied by the backend)    |
 
 ---
 
 ## Project Structure
 
 ```
-NEXUS/
+NDRMS/
 ├── frontend/                  # React + Vite + TypeScript app
 │   ├── src/
 │   │   ├── components/        # reusable UI + map components
@@ -85,7 +91,7 @@ NEXUS/
 │   │   ├── api/routes.py      # REST endpoints
 │   │   ├── models/schemas.py  # domain models
 │   │   ├── schemas/incident.py# request/response models
-│   │   ├── services/          # weather, routing, forecasting, aggregator, store, image analyzer
+│   │   ├── services/          # weather, routing, live incidents, forecasting, aggregator, store, image analyzer
 │   │   ├── ml/risk_model.py   # Gradient Boosting disruption predictor
 │   │   └── data/demo_data.py  # realistic seeded NER data
 │   ├── requirements.txt
@@ -100,7 +106,7 @@ NEXUS/
 
 - **Node.js** 18+ and **npm**
 - **Python** 3.10+ (3.12/3.13 recommended; scikit-learn wheels for 3.14 are available)
-- No external API keys required (Demo Mode)
+- No external API keys required (public OSRM, GDACS, USGS and map tiles are keyless)
 
 ---
 
@@ -119,8 +125,8 @@ venv\Scripts\activate
 
 pip install -r requirements.txt
 
-# Optional: copy .env.example to .env to customise (Demo Mode is default)
-copy .env.example .env        # Windows
+# Optional: copy .env.example to .env to customise (keyless defaults)
+copy ..\.env.example .env     # Windows
 # cp .env.example .env        # macOS/Linux
 
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
@@ -138,8 +144,9 @@ npm run dev
 
 Open **http://localhost:5173** in your browser. The Vite dev server proxies `/api` to the backend, so no CORS configuration is needed.
 
-> The app also has an **offline fallback** with bundled demo data — screens will still render
-> (with a "Demo / simulated data (offline fallback)" notice) even if the backend isn't running.
+> The app also has an **offline fallback** with bundled demo data for roads, facilities and map
+> inputs — screens will still render (with a "Demo / simulated data (offline fallback)" notice)
+> even if the backend isn't running. Live incidents and real-road routing need the backend.
 
 ### 3. Production-style build check (optional)
 
@@ -167,8 +174,8 @@ any other path falls back to the SPA (deep links like `/route-planner` work).
 ### Docker
 
 ```bash
-docker build -t nexus .
-docker run --rm -p 8000:8000 -e OPENWEATHER_API_KEY=... nexus
+docker build -t ndrms .
+docker run --rm -p 8000:8000 -e OPENWEATHER_API_KEY=... ndrms
 ```
 
 The multi-stage build compiles the frontend with Node and ships only the
@@ -215,67 +222,96 @@ Free-plan notes:
 Follow this scripted journey end-to-end:
 
 1. Open the **Dashboard** → see the NER map with active incidents and the AI Situation Panel.
-2. Click **NH-10** on the map → Road Details shows accessibility ~64%, high weather/landslide risk,
-   disruption probability **~78%** and the 12-hour AI forecast.
-3. Go to **Route Planner** → select From **Guwahati**, To **Tawang**, Cargo **Medicines**,
-   Priority **Emergency** → click **Find Safest Route**.
-4. Three alternatives appear — the AI **recommends Route A** (~380 km) even though Route B is shorter,
-   because A has better accessibility and lower disruption probability. The scoring weights are shown.
-5. Go to **Incidents** → **Report Incident** → submit a simulated **Landslide** (optionally upload an
-   image to see the simulated CV analysis).
-6. The map adds the marker, road risk is recomputed, the dashboard statistics update, and a
-   success toast confirms it.
-7. Explore **Alert Center**, **Logistics** and **Analytics** for the full picture.
-8. In **Logistics**, click **Add Warehouse** to register a depot with initial stock, or **Edit Supplies**
-   on any depot to update stock levels, capacity and operational status. Changes persist to the database.
+2. Click **NH-10** on the map → Road Details shows accessibility, weather/landslide risk,
+   disruption probability and the 12-hour AI forecast.
+3. Go to **Route Planner** → choose From **Guwahati**, To **Tawang** (or GPS / map pin / global
+   search), pick **Safest**, optionally set cargo/priority/vehicle → click **Plan route**.
+4. Real drivable road alternatives appear on the map, with distance, ETA, safety score, incidents
+   nearby and turn-by-turn directions. The **LIVE ROADS** badge confirms OSRM geometry; a
+   **FALLBACK ROUTE** badge means the public providers were unavailable and the built-in graph
+   was used instead. The planner still returns a route either way.
+5. Go to **Incidents** → **Live Incidents** at the top shows real GDACS/USGS events with source
+   links, filters and a map. Seeded demo incidents are not shown.
+6. From the persistent side **Report Incident** button (or the page button), submit a field report —
+   optionally upload an image to see the simulated CV analysis.
+7. The marker appears in **Field Incident Reports**, road risk is recomputed, dashboard statistics
+   update and a success toast confirms it.
+8. Explore **Alert Center**, **Logistics** and **Analytics** for the full picture.
+9. In **Logistics**, click **Add Warehouse** to register a depot with initial stock, or **Edit Supplies**
+   on any depot to update stock levels, capacity and operational status.
 
-All of this runs without any external API.
+No paid API or map token is needed. Live routing and live incidents use public services with the
+backend as a keyless proxy.
 
 ---
 
 ## API Endpoints
 
-| Method | Endpoint                 | Description                                        |
-| ------ | ------------------------ | -------------------------------------------------- |
-| GET    | `/health`                | Health probe (alias: `/api/health`)                |
-| GET    | `/api/dashboard`         | Dashboard summary stats                            |
-| GET    | `/api/roads`             | All road segments                                  |
-| GET    | `/api/roads/{id}`        | Single road detail                                 |
-| GET    | `/api/incidents`         | All field incidents                                |
-| POST   | `/api/incidents`         | Report a new incident (recomputes road risk)       |
-| GET    | `/api/weather`           | Weather readings                                   |
-| GET    | `/api/routes`            | Road + city data for the map/inputs                |
-| POST   | `/api/routes/optimize`   | Score route alternatives (origin/destination/cargo)|
-| POST   | `/api/predict-risk`      | ML disruption-risk prediction                      |
-| GET    | `/api/forecast/{roadId}` | 12-hour disruption forecast for a road             |
-| GET    | `/api/alerts`            | Alerts by category & severity                      |
-| GET    | `/api/logistics`         | Warehouses, fleet, supply requests                 |
-| GET    | `/api/warehouses`        | All warehouses and current stock                   |
-| POST   | `/api/warehouses`        | Add a warehouse with initial supplies              |
-| PATCH  | `/api/warehouses/{id}`   | Edit supplies, capacity or status of a warehouse   |
-| GET    | `/api/analytics`         | Chart data, state-wise stats                       |
-| GET    | `/api/meta`              | Cities, states, enums used by forms                |
+| Method | Endpoint                        | Description                                                       |
+| ------ | ------------------------------- | ----------------------------------------------------------------- |
+| GET    | `/health`                       | Health probe (alias: `/api/health`)                               |
+| GET    | `/api/dashboard`                | Dashboard summary stats (real + field incidents only)             |
+| GET    | `/api/roads`                    | All road segments                                                 |
+| GET    | `/api/roads/{id}`               | Single road detail                                                |
+| GET    | `/api/incidents`                | Real live incidents + user field reports (no seeded demo incidents) |
+| GET    | `/api/incidents/live`           | GDACS/USGS feed with `region=all|ner|india`, `limit`, `refresh`    |
+| GET    | `/api/incidents/feed-status`    | Feed health, enabled sources and cache info                       |
+| POST   | `/api/incidents`                | Report a new incident (recomputes road risk)                      |
+| GET    | `/api/weather`                  | Weather readings                                                  |
+| GET    | `/api/geocode/reverse`          | Reverse geocode a map pin via OSM Nominatim                       |
+| GET    | `/api/geocode/search`           | Search for a place by name                                        |
+| GET    | `/api/routes`                   | Road + city data for the map/inputs                               |
+| POST   | `/api/routes/plan`              | Real-road planner: OSRM with graph/direct fallbacks, incident overlay |
+| POST   | `/api/routes/optimize`          | Score existing road alternatives (origin/destination/cargo)       |
+| POST   | `/api/predict-risk`             | ML disruption-risk prediction                                     |
+| GET    | `/api/forecast/{roadId}`        | 12-hour disruption forecast for a road                            |
+| GET    | `/api/alerts`                   | Alerts by category & severity                                     |
+| GET    | `/api/logistics`                | Warehouses, fleet, supply requests                                |
+| GET    | `/api/warehouses`               | All warehouses and current stock                                  |
+| POST   | `/api/warehouses`               | Add a warehouse with initial supplies                             |
+| PATCH  | `/api/warehouses/{id}`          | Edit supplies, capacity or status of a warehouse                  |
+| GET    | `/api/analytics`                | Chart data, state-wise stats                                      |
+| GET    | `/api/meta`                     | Cities, states, enums used by forms                               |
 
 ---
 
 ## Honesty & Labelling
 
-- All data is **simulated demo data** — it is not real government or operational data.
+- **Real:** live incidents from GDACS/USGS, drivable road geometry from public OSRM servers,
+  OSM place search/reverse geocoding and public raster map tiles.
+- **Simulated / demo:** road network, warehouses, hospitals, supply requests, weather fallback,
+  image analysis, disruption forecasts and ML risk scores. This is not government or operational data.
+- Seeded demo incidents `inc-001`–`inc-008` are excluded everywhere; the incident list, dashboard,
+  alerts, analytics and route risk overlay use only live feed events and real user reports.
 - ML predictions are **"AI Prediction (Demo)"**; the CV module is explicitly a *prototype* and
   **not** government-certified detection.
-- The app displays **DEMO MODE** / **Demo data** badges to make this clear.
-- No API keys are exposed in frontend code; the frontend talks to the backend only.
+- The app labels demo/simulated and live content separately. No API keys are exposed in frontend
+  code; the frontend talks to the backend only.
 
 ---
 
 ## Configuration
 
-`.env.example` files define demo defaults:
+`.env.example` files define keyless defaults:
 
-- `backend/.env.example` → `DEMO_MODE=true`, database URL, optional `OPENWEATHER_API_KEY` placeholder
+- `backend/.env.example` → app name/version, database URL, optional `OPENWEATHER_API_KEY`, routing
+  and live-feed timeouts
 - `frontend/.env.example` → `VITE_API_BASE_URL` (defaults to `/api` via the Vite proxy)
 
-Set `DEMO_MODE=false` and provide a real weather key if you later integrate a live weather source.
+Useful backend settings:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `APP_NAME` / `APP_VERSION` | `NDRMS` / `1.3.0` | Branding and health response |
+| `ROUTING_TIMEOUT_SECONDS` | `8.0` | Per-provider OSRM timeout |
+| `ROUTING_CACHE_TTL_SECONDS` | `600` | Route cache duration |
+| `ROUTING_PROVIDERS` | `osrm-public,osrm-de` | Ordered public OSRM providers |
+| `LIVE_INCIDENTS_ENABLED` | `true` | Enable GDACS/USGS live incident feeds |
+| `LIVE_INCIDENTS_CACHE_TTL_SECONDS` | `600` | Feed cache duration (fair use) |
+| `LIVE_INCIDENTS_TIMEOUT_SECONDS` | `10.0` | Feed request timeout |
+| `OPENWEATHER_API_KEY` | empty | Optional live weather; empty uses simulated weather |
+
+Never commit `backend/.env` — it may contain a real weather key.
 
 ---
 

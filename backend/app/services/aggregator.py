@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.data.demo_data import CITIES, STATES
+from app.services import live_incident_service
 from app.services.store import get_store
 from app.services.weather_service import get_weather, get_weather_alert_count
 
@@ -16,7 +17,7 @@ def dashboard() -> dict[str, Any]:
     roads = store.roads()
     vehicles = store.vehicles()
     requests = store.supply_requests()
-    active = store.active_incidents()
+    active = live_incident_service.active_incidents()
 
     blocked = [r for r in roads if r["status"] == "blocked"]
     high_risk = [r for r in roads if r["disruption_probability"] >= 60]
@@ -55,7 +56,7 @@ def road_detail(road_id: str) -> dict | None:
 def alerts() -> list[dict[str, Any]]:
     store = get_store()
     roads = store.roads()
-    active = store.active_incidents()
+    active = live_incident_service.active_incidents()
     requests = store.supply_requests()
     out = []
 
@@ -182,15 +183,15 @@ def _readiness(warehouses: list[dict]) -> int:
 
 def analytics() -> dict[str, Any]:
     store = get_store()
-    active = store.active_incidents()
+    active = live_incident_service.active_incidents()
     roads = store.roads()
     requests = store.supply_requests()
 
     # Disruption trend derived from persisted incident history.
-    disruptions = _disruptions_over_time(store.incidents_all())
+    disruptions = _disruptions_over_time(live_incident_service.all_incidents())
 
     # Delivery success rate per month, derived from resolved vs total incidents.
-    delivery = _delivery_success(store.incidents_all())
+    delivery = _delivery_success(live_incident_service.all_incidents())
 
     travel_time = [
         {"label": "Guwahati", "value": 6.8},
@@ -219,7 +220,7 @@ def analytics() -> dict[str, Any]:
 
     # Incident types
     type_counts: dict[str, int] = {}
-    for inc in store.incidents_all():
+    for inc in live_incident_service.all_incidents():
         type_counts[inc["type"]] = type_counts.get(inc["type"], 0) + 1
     incident_types = [
         {"name": k, "value": v}

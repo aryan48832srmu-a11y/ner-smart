@@ -1,11 +1,13 @@
 ﻿import { useState, useRef, useEffect } from 'react';
-import { Plus, MapPin, Upload, Image as ImageIcon, FileWarning, LocateFixed } from 'lucide-react';
+import { Plus, MapPin, Upload, Image as ImageIcon, FileWarning, LocateFixed, RefreshCw } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { api } from '../services/api';
 import { useApi } from '../hooks/useApi';
-import { demoMeta, demoIncidents } from '../data/fallbackData';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
+import { demoMeta } from '../data/fallbackData';
 import { INDIAN_STATES } from '../data/indianStates';
 import type { Meta, Incident } from '../types';
 import { matchState, nearestCity } from '../utils/geo';
@@ -17,6 +19,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { riskColorFor, formatTimeAgo } from '../utils/format';
 import { useApp } from '../state/AppContext';
 import { MAP_STYLES } from '../components/map/mapStyles';
+import { LiveIncidents } from '../components/incidents/LiveIncidents';
 
 function MapClickHandler({ onPick }: { onPick: (pos: { lat: number; lng: number }) => void }) {
   useMapEvents({
@@ -47,9 +50,24 @@ const pickerIcon = L.divIcon({
 export function Incidents() {
   const { notify, bumpIncident } = useApp();
   const meta = useApi<Meta>(() => api.meta(), demoMeta, []);
-  const incidents = useApi<Incident[]>(() => api.incidents(), demoIncidents, []);
+  const incidents = useApi<Incident[]>(() => api.incidents(), [], []);
 
   const [open, setOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // The side "Report Incident" button links here with ?report=1 so it opens
+  // the existing form directly instead of duplicating it in the layout.
+  useEffect(() => {
+    if (searchParams.get('report') !== '1') return;
+    setOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('report');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  // Active reports refresh on open, on tab focus and every 20 seconds.
+  const lastUpdate = useAutoRefresh(() => incidents.refresh(true), 20_000);
+
   const [form, setForm] = useState({
     type: 'Landslide',
     state: 'Arunachal Pradesh',
@@ -192,7 +210,27 @@ export function Incidents() {
         </button>
       </div>
 
-      <Card title="Field Incident Reports" subtitle="Field reported incidents" padded={false} actions={<Badge tone="red">{incidents.data.length} total</Badge>}>
+      <LiveIncidents />
+
+      <Card
+        title="Field Incident Reports"
+        subtitle="Auto-updating · newest reports first"
+        padded={false}
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => incidents.refresh(true)}
+              className="rounded-md p-1.5 text-slate-400 hover:bg-base-700 hover:text-slate-700"
+              title={lastUpdate ? `Updated ${lastUpdate.toLocaleTimeString()}` : 'Refresh'}
+              aria-label="Refresh incidents"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+            <Badge tone="red">{incidents.data.length} total</Badge>
+          </div>
+        }
+      >
         {incidents.loading ? (
           <LoadingBlock />
         ) : incidents.data.length === 0 ? (

@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models for NEXUS."""
+"""SQLAlchemy ORM models for NDRMS."""
 
 from __future__ import annotations
 

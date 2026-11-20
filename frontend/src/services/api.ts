@@ -11,6 +11,8 @@ import type {
   RiskPredictionResult,
   Road,
   RouteOptimizeResult,
+  RoutePlanResult,
+  LiveIncidentFeed,
   Weather,
   Alert,
   Warehouse,
@@ -60,6 +62,11 @@ export const api = {
   analytics: () => get<AnalyticsSummary>('/analytics'),
   meta: () => get<Meta>('/meta'),
   optimize: (body: Record<string, unknown>) => post<RouteOptimizeResult>('/routes/optimize', body),
+  planRoute: (body: Record<string, unknown>) => post<RoutePlanResult>('/routes/plan', body),
+  liveIncidents: (region: 'all' | 'ner' | 'india' = 'all', refresh = false) =>
+    get<LiveIncidentFeed>(
+      `/incidents/live?region=${region}&limit=120${refresh ? '&refresh=true' : ''}`,
+    ),
   predictRisk: (body: Record<string, number>) => post<RiskPredictionResult>('/predict-risk', body),
   forecast: (roadId: string) => get<DisruptionForecast>(`/forecast/${roadId}`),
   reverseGeocode: (lat: number, lng: number) =>

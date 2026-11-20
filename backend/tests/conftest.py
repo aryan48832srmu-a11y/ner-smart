@@ -6,6 +6,8 @@ import os
 
 os.environ["DATABASE_URL"] = "sqlite://"
 os.environ["OPENWEATHER_API_KEY"] = ""
+# Live feeds are tested explicitly; keep the rest of the suite offline/fast.
+os.environ["LIVE_INCIDENTS_ENABLED"] = "false"
 
 import pytest
 

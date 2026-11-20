@@ -1,5 +1,5 @@
 /**
- * Basemap definitions for the NEXUS maps.
+ * Basemap definitions for the NDRMS maps.
  *
  * No map API key is required: these are public raster tile services. The only
  * key used by the project is `OPENWEATHER_API_KEY`, which powers the weather
@@ -184,7 +184,7 @@ export const MAP_STYLE_ORDER: MapStyleId[] = [
   'hot',
 ];
 
-const STORAGE_KEY = 'nexus-map-style';
+const STORAGE_KEY = 'ndrms-map-style';
 
 export function loadMapStyle(): MapStyleId {
   try {

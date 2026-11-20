@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -10,9 +10,10 @@ import {
   Radio,
   Menu,
   X,
+  Plus,
 } from 'lucide-react';
 
-const nav = [
+const publicNav = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/route-planner', label: 'Route Planner', icon: Route },
   { to: '/incidents', label: 'Incidents', icon: Map },
@@ -54,13 +55,13 @@ export function AppLayout() {
             <Radio className="h-5 w-5" />
           </div>
           <div className="hidden lg:block">
-            <p className="text-sm font-extrabold tracking-wide text-slate-900">NEXUS</p>
+            <p className="text-sm font-extrabold tracking-wide text-slate-900">NDRMS</p>
             <p className="text-[10px] leading-tight text-slate-400">Logistics & Accessibility Intelligence</p>
           </div>
         </div>
 
         <nav className="flex-1 space-y-1 overflow-y-auto p-2 lg:p-3">
-          {nav.map((item) => (
+          {publicNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -105,7 +106,7 @@ export function AppLayout() {
                   <Radio className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-sm font-extrabold tracking-wide text-slate-900">NEXUS</p>
+                  <p className="text-sm font-extrabold tracking-wide text-slate-900">NDRMS</p>
                   <p className="text-[10px] leading-tight text-slate-400">Logistics & Accessibility</p>
                 </div>
               </div>
@@ -119,7 +120,7 @@ export function AppLayout() {
             </div>
 
             <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-              {nav.map((item) => (
+              {publicNav.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
@@ -182,6 +183,18 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Persistent side action: one tap opens the report form from any page. */}
+      <NavLink
+        to="/incidents?report=1"
+        aria-label="Report Incident"
+        className="fixed bottom-20 right-3 z-30 flex items-center gap-2 rounded-full bg-accent-600 px-4 py-3 text-sm font-bold text-white shadow-xl transition-colors hover:bg-accent-500 md:bottom-auto md:right-0 md:top-1/2 md:-translate-y-1/2 md:flex-col md:gap-2 md:rounded-l-xl md:rounded-r-none md:px-2.5 md:py-4"
+      >
+        <Plus className="h-5 w-5 shrink-0" />
+        <span className="text-xs font-bold md:text-[10px] md:uppercase md:tracking-wide md:[writing-mode:vertical-rl]">
+          Report Incident
+        </span>
+      </NavLink>
     </div>
   );
 }

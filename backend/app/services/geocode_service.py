@@ -20,7 +20,7 @@ from app.config import settings
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse"
 NOMINATIM_SEARCH_URL = "https://nominatim.openstreetmap.org/search"
-USER_AGENT = "NEXUS/1.1 (field incident reporting; demo)"
+USER_AGENT = "NDRMS/1.1 (field incident reporting; demo)"
 
 _CACHE_TTL_SECONDS = 3600.0
 _cache: dict[str, tuple[float, dict[str, Any] | None]] = {}

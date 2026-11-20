@@ -9,13 +9,14 @@ import {
   ShieldAlert,
   MapPin,
   Route,
+  RefreshCw,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useApi } from '../hooks/useApi';
+import { useAutoRefresh } from '../hooks/useAutoRefresh';
 import {
   demoDashboard,
   demoRoads,
-  demoIncidents,
   demoAlerts,
 } from '../data/fallbackData';
 import type {
@@ -42,7 +43,7 @@ export function Dashboard() {
 
   const dash = useApi<DashboardSummary>(() => api.dashboard(), demoDashboard, [incidentVersion]);
   const roads = useApi<Road[]>(() => api.roads(), demoRoads, [incidentVersion]);
-  const incidents = useApi<Incident[]>(() => api.incidents(), demoIncidents, [incidentVersion]);
+  const incidents = useApi<Incident[]>(() => api.incidents(), [], [incidentVersion]);
   const weather = useApi<Weather[]>(() => api.weather(), [], []);
   const alerts = useApi<Alert[]>(() => api.alerts(), demoAlerts, [incidentVersion]);
   const logistics = useApi<LogisticsSummary>(() => api.logistics(), { warehouses: [], vehicles: [], requests: [], deliveries_active: 0, critical_destinations: [], hospitals: [], readiness_pct: 0 }, []);
@@ -51,6 +52,14 @@ export function Dashboard() {
     [],
     [],
   );
+
+  // Active Incidents refresh on open, on tab focus and every 20 seconds.
+  const lastIncidentUpdate = useAutoRefresh(() => {
+    incidents.refresh(true);
+    dash.refresh(true);
+    roads.refresh(true);
+    alerts.refresh(true);
+  }, 20_000);
 
   const [selectedRoad, setSelectedRoad] = useState<Road | null>(null);
   const activeInc = incidents.data;
@@ -202,7 +211,30 @@ export function Dashboard() {
       </div>
 
       {/* Active Incidents table */}
-      <Card title="Active Incidents" subtitle="Field-reported incidents affecting logistics" padded={false} actions={<Badge tone="red">{activeInc.length} active</Badge>}>
+      <Card
+        title="Active Incidents"
+        subtitle="Auto-updating · field reports affecting logistics"
+        padded={false}
+        actions={
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                incidents.refresh(true);
+                dash.refresh(true);
+                roads.refresh(true);
+                alerts.refresh(true);
+              }}
+              className="rounded-md p-1.5 text-slate-400 hover:bg-base-700 hover:text-slate-700"
+              title={lastIncidentUpdate ? `Updated ${lastIncidentUpdate.toLocaleTimeString()}` : 'Refresh'}
+              aria-label="Refresh incidents"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+            </button>
+            <Badge tone="red">{activeInc.length} active</Badge>
+          </div>
+        }
+      >
         {incidents.loading ? (
           <LoadingBlock label="Loading incidents…" />
         ) : activeInc.length === 0 ? (
