@@ -64,6 +64,20 @@ export function RoutePlanner() {
 
   const cities = meta.data.cities;
 
+  const resolveEndpoint = async (place: PickedPlace): Promise<PickedPlace> => {
+    if (place.lat !== undefined && place.lng !== undefined) return place;
+    const label = place.label.trim();
+    if (!label) return place;
+    try {
+      const matches = await api.searchPlaces(label, 3);
+      const first = matches.results[0];
+      if (first) return { label: first.label, lat: first.lat, lng: first.lng };
+    } catch {
+      // The backend also geocodes labels; keep the typed text as a fallback.
+    }
+    return place;
+  };
+
   const plan = async () => {
     setLoading(true);
     setError(null);
@@ -71,24 +85,24 @@ export function RoutePlanner() {
     setSelectedRouteId(null);
     setShowAllSteps(false);
     try {
+      const from = await resolveEndpoint(origin);
+      const to = await resolveEndpoint(destination);
+      if (from !== origin) setOrigin(from);
+      if (to !== destination) setDestination(to);
       const res = await api.planRoute({
-        origin: origin.label.trim(),
-        destination: destination.label.trim(),
-        origin_lat: origin.lat,
-        origin_lng: origin.lng,
-        destination_lat: destination.lat,
-        destination_lng: destination.lng,
+        origin: from.label.trim(),
+        destination: to.label.trim(),
+        origin_lat: from.lat,
+        origin_lng: from.lng,
+        destination_lat: to.lat,
+        destination_lng: to.lng,
         mode,
         cargo_type: cargoType,
         priority,
         vehicle,
       });
       if (res.error) setError(res.error);
-      else {
-        setResult(res);
-        const mid = res.recommended?.coordinates[Math.floor(res.recommended.coordinates.length / 2)];
-        if (mid) setFocus({ lat: mid[0], lng: mid[1], ts: Date.now() });
-      }
+      else setResult(res);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not plan the route. Please try again.');
     } finally {
@@ -167,7 +181,7 @@ export function RoutePlanner() {
         <div>
           <h2 className="text-xl font-bold text-slate-900">Route Planner</h2>
           <p className="text-sm text-slate-400">
-            Real roads from OpenStreetMap · live incident overlay · no API key needed.
+            Real roads from OpenStreetMap · turn-by-turn directions · live incident overlay · no API key.
           </p>
         </div>
         <Badge tone={result?.live ? 'green' : 'violet'} pulse={!!result?.live}>
@@ -387,11 +401,7 @@ export function RoutePlanner() {
                 color={colorFor(route.id)}
                 rank={i}
                 selected={route.id === selectedRoute?.id}
-                onSelect={() => {
-                  setSelectedRouteId(route.id);
-                  const mid = route.coordinates[Math.floor(route.coordinates.length / 2)];
-                  if (mid) setFocus({ lat: mid[0], lng: mid[1], ts: Date.now() });
-                }}
+                onSelect={() => setSelectedRouteId(route.id)}
               />
             ))}
           </div>
@@ -463,7 +473,7 @@ export function RoutePlanner() {
         <Card title="How it works" padded={false}>
           <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3">
             {[
-              { icon: Navigation, title: 'Real roads', desc: 'Routes follow drivable OSM roads from public OSRM servers — not a fictional graph.' },
+              { icon: Navigation, title: 'Real roads', desc: 'Routes follow drivable OSM roads via Valhalla and OSRM, with Google-Maps-style turn instructions — not a fictional graph.' },
               { icon: ShieldCheck, title: 'Incident-aware', desc: 'Live GDACS and USGS reports are overlaid on every alternative before ranking.' },
               { icon: Clock, title: 'Always available', desc: 'If the live servers are down, a built-in road graph and a direct estimate keep the planner usable.' },
             ].map((f) => (

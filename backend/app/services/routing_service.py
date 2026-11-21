@@ -1,13 +1,14 @@
 """Real-road route planning with layered fallbacks.
 
-The planner never fails the user. It tries public OSRM routing servers first
-(actual drivable roads, turn-by-turn steps), then the built-in NER road graph,
-and finally a direct connection. Every response contains GeoJSON-style
-coordinates the map can draw immediately.
+The planner never fails the user. It tries Valhalla first (OpenStreetMap road
+network with natural, Google-Maps-style turn-by-turn instructions and multiple
+alternatives), then public OSRM servers, then the built-in NER road graph, and
+finally a direct connection. Every response contains GeoJSON-style coordinates
+the map can draw immediately.
 
 Design goals
 ------------
-* **Real roads** — primary source is OpenStreetMap routing via OSRM.
+* **Real roads** — primary source is OpenStreetMap routing via Valhalla/OSRM.
 * **Always usable** — up to 4 independent sources; a route is always returned.
 * **Fast** — successful provider results are cached in memory by endpoint pair.
 * **Safe** — active incidents are overlaid on each geometry and used to rank
@@ -19,6 +20,7 @@ The HTTP call is isolated in ``_provider_get`` so tests can monkeypatch it.
 
 from __future__ import annotations
 
+import json
 import math
 import threading
 import time
@@ -32,8 +34,15 @@ from app.data.demo_data import CITIES
 from app.services import geocode_service, live_incident_service
 from app.services.store import get_store
 
-# OSRM-compatible public endpoints. ``profile`` is the part after /routed-/.
+# Keyless public road-routing endpoints. Valhalla is first because it returns
+# human-readable turn-by-turn directions and realistic alternatives.
+VALHALLA_URL = "https://valhalla1.openstreetmap.de/route"
+
 PROVIDERS: dict[str, dict[str, str]] = {
+    "valhalla": {
+        "url": VALHALLA_URL,
+        "label": "OpenStreetMap (Valhalla turn-by-turn)",
+    },
     "osrm-public": {
         "url": "https://router.project-osrm.org/route/v1/driving",
         "label": "OpenStreetMap (OSRM public)",
@@ -55,7 +64,7 @@ SEVERITY_WEIGHT = {"Critical": 4, "High": 3, "Medium": 2, "Low": 1}
 INCIDENT_RADIUS_KM = 12.0
 ROUTE_COLORS = ["#22c55e", "#3b82f6", "#f59e0b", "#a855f7"]
 
-_cache: dict[str, tuple[float, list[dict[str, Any]]]] = {}
+_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 _cache_lock = threading.Lock()
 
 
@@ -93,6 +102,38 @@ def _fmt_duration(minutes: float) -> str:
     return f"{mins}m"
 
 
+def _decode_polyline(encoded: str, precision: int = 6) -> list[list[float]]:
+    """Decode a Valhalla polyline6 string into GeoJSON-style ``[lng, lat]`` points."""
+    points: list[list[float]] = []
+    index = 0
+    lat = lng = 0
+    factor = 10 ** precision
+    while index < len(encoded):
+        result = 0
+        shift = 0
+        while index < len(encoded):
+            value = ord(encoded[index]) - 63
+            index += 1
+            result |= (value & 0x1F) << shift
+            shift += 5
+            if value < 0x20:
+                break
+        lat += ~(result >> 1) if result & 1 else (result >> 1)
+
+        result = 0
+        shift = 0
+        while index < len(encoded):
+            value = ord(encoded[index]) - 63
+            index += 1
+            result |= (value & 0x1F) << shift
+            shift += 5
+            if value < 0x20:
+                break
+        lng += ~(result >> 1) if result & 1 else (result >> 1)
+        points.append([lng / factor, lat / factor])
+    return points
+
+
 def _provider_get(url: str, params: dict[str, Any]) -> dict[str, Any]:
     headers = {"User-Agent": "NDRMS/1.3 (route planning; demo)", "Accept": "application/json"}
     with httpx.Client(timeout=settings.ROUTING_TIMEOUT_SECONDS, headers=headers) as client:
@@ -101,20 +142,107 @@ def _provider_get(url: str, params: dict[str, Any]) -> dict[str, Any]:
         return response.json()
 
 
+def _valhalla_costing(vehicle: str) -> str:
+    """Use truck routing for heavy vehicles, car routing otherwise."""
+    return "truck" if "truck" in (vehicle or "").lower() else "auto"
+
+
+def _valhalla_params(origin: dict[str, Any], destination: dict[str, Any], vehicle: str) -> dict[str, Any]:
+    request = {
+        "locations": [
+            {"lat": origin["lat"], "lon": origin["lng"]},
+            {"lat": destination["lat"], "lon": destination["lng"]},
+        ],
+        "costing": _valhalla_costing(vehicle),
+        "alternates": 2,
+        "directions_options": {"units": "kilometers", "language": "en-US"},
+    }
+    return {"json": json.dumps(request, separators=(",", ":"))}
+
+
+def _parse_valhalla(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Normalise Valhalla trips into the same raw shape used for OSRM routes."""
+    trips: list[dict[str, Any]] = []
+    main = payload.get("trip")
+    if isinstance(main, dict):
+        trips.append(main)
+    for alternate in payload.get("alternates", []) or []:
+        if isinstance(alternate, dict) and isinstance(alternate.get("trip"), dict):
+            trips.append(alternate["trip"])
+
+    raw: list[dict[str, Any]] = []
+    for trip in trips:
+        if trip.get("status", 0) not in (0, None):
+            continue
+        coordinates: list[list[float]] = []
+        steps: list[dict[str, Any]] = []
+        for leg in trip.get("legs", []) or []:
+            coordinates.extend(_decode_polyline(leg.get("shape") or "", 6))
+            for maneuver in leg.get("maneuvers", []) or []:
+                streets = maneuver.get("street_names") or []
+                if isinstance(streets, str):
+                    streets = [streets]
+                steps.append(
+                    {
+                        "instruction": maneuver.get("instruction") or "Continue on route",
+                        "name": streets[0] if streets else "",
+                        "distance": float(maneuver.get("length", 0)) * 1000,
+                        "duration": float(maneuver.get("time", 0)),
+                    }
+                )
+        if len(coordinates) < 2:
+            continue
+
+        summary = trip.get("summary") or {}
+        distance_km = float(summary.get("length", 0))
+        duration_seconds = float(summary.get("time", 0))
+        if distance_km <= 0:
+            distance_km = _distance_of(coordinates)
+        if duration_seconds <= 0 and steps:
+            duration_seconds = sum(float(s["duration"]) for s in steps)
+        if duration_seconds <= 0:
+            duration_seconds = distance_km / 45.0 * 3600
+
+        raw.append(
+            {
+                "distance": distance_km * 1000,
+                "duration": duration_seconds,
+                "geometry": {"coordinates": coordinates},
+                "legs": [{"steps": steps}],
+            }
+        )
+        if len(raw) >= 3:
+            break
+    return raw
+
+
 def resolve_point(label: str, lat: float | None = None, lng: float | None = None) -> dict[str, Any]:
     """Turn a place label (and optional coordinates) into a routable point."""
     name = (label or "").strip()
     if lat is not None and lng is not None:
         return {"label": name or f"{lat:.4f}, {lng:.4f}", "lat": lat, "lng": lng, "geocoded": True}
 
-    # 1. Known demo cities — instant, no network.
+    # 1. Known NER cities — instant, no network. Accept "Guwahati, Assam" too.
+    needle = name.lower().strip().rstrip(",")
+    best: tuple[int, str, dict[str, Any]] | None = None
     for city_name, data in CITIES.items():
-        if city_name.lower() == name.lower():
-            return {"label": city_name, "lat": float(data["lat"]), "lng": float(data["lng"]), "geocoded": True}
+        state = str(data.get("state") or "")
+        candidates = [city_name.lower(), f"{city_name}, {state}".lower().rstrip(",")]
+        for candidate in candidates:
+            score = 3 if needle == candidate else 2 if candidate in needle or needle in candidate else 0
+            if score and (best is None or score > best[0]):
+                best = (score, city_name, data)
+    if best:
+        return {
+            "label": best[1],
+            "lat": float(best[2]["lat"]),
+            "lng": float(best[2]["lng"]),
+            "geocoded": True,
+        }
 
     # 2. Forward geocoding via the existing Nominatim proxy.
     if len(name) >= 2:
-        for hit in geocode_service.search(name, 1):
+        for hit in geocode_service.search(name, 5):
             return {
                 "label": hit.get("label") or name,
                 "lat": float(hit["lat"]),
@@ -135,7 +263,7 @@ def resolve_point(label: str, lat: float | None = None, lng: float | None = None
 # ---------------------------------------------------------------------------
 # Provider / fallback route discovery
 # ---------------------------------------------------------------------------
-def _cached(key: str) -> list[dict[str, Any]] | None:
+def _cached(key: str) -> dict[str, Any] | None:
     with _cache_lock:
         hit = _cache.get(key)
         if not hit:
@@ -146,18 +274,23 @@ def _cached(key: str) -> list[dict[str, Any]] | None:
         return hit[1]
 
 
-def _remember(key: str, routes: list[dict[str, Any]]) -> None:
+def _remember(key: str, value: dict[str, Any]) -> None:
     with _cache_lock:
-        _cache[key] = (time.time(), routes)
+        _cache[key] = (time.time(), value)
 
 
-def _provider_routes(origin: dict[str, Any], destination: dict[str, Any]) -> tuple[list[dict[str, Any]], str | None, list[str]]:
+def _provider_routes(
+    origin: dict[str, Any],
+    destination: dict[str, Any],
+    vehicle: str = "Heavy Truck",
+) -> tuple[list[dict[str, Any]], str | None, list[str]]:
     """Return (raw routes, provider id, warnings)."""
     coord_text = f"{origin['lng']:.6f},{origin['lat']:.6f};{destination['lng']:.6f},{destination['lat']:.6f}"
-    key = f"osrm|{coord_text}"
+    key = f"route|{coord_text}|{_valhalla_costing(vehicle)}"
     cached = _cached(key)
     if cached is not None:
-        return cached, "cache", []
+        # Cache stores the provider id alongside the routes.
+        return cached["routes"], cached["provider"], []
 
     warnings: list[str] = []
     provider_ids = [p.strip() for p in settings.ROUTING_PROVIDERS.split(",") if p.strip()]
@@ -166,19 +299,26 @@ def _provider_routes(origin: dict[str, Any], destination: dict[str, Any]) -> tup
         if not provider:
             continue
         try:
-            data = _provider_get(
-                provider["url"] + "/" + coord_text,
-                {
-                    "overview": "full",
-                    "geometries": "geojson",
-                    "alternatives": "3",
-                    "steps": "true",
-                },
-            )
-            if data.get("code") != "Ok" or not data.get("routes"):
-                raise ValueError(f"provider returned {data.get('code', 'no code')}")
-            raw = data["routes"][:3]
-            _remember(key, raw)
+            if provider_id == "valhalla":
+                data = _provider_get(provider["url"], _valhalla_params(origin, destination, vehicle))
+                raw = _parse_valhalla(data)
+                if not raw:
+                    raise ValueError("Valhalla returned no usable route")
+            else:
+                data = _provider_get(
+                    provider["url"] + "/" + coord_text,
+                    {
+                        "overview": "full",
+                        "geometries": "geojson",
+                        "alternatives": "3",
+                        "steps": "true",
+                        "annotations": "duration,distance",
+                    },
+                )
+                if data.get("code") != "Ok" or not data.get("routes"):
+                    raise ValueError(f"provider returned {data.get('code', 'no code')}")
+                raw = data["routes"][:3]
+            _remember(key, {"routes": raw, "provider": provider_id})
             return raw, provider_id, warnings
         except Exception as exc:  # network / timeout / bad payload — try next provider
             warnings.append(f"{provider['label']} unavailable ({type(exc).__name__}).")
@@ -218,13 +358,14 @@ def _offline_routes(
             road = roads_by_name.get(segment.get("road_name"))
             points = road.get("coordinates") or [] if road else []
             for point in points:
-                pair = [float(point[0]), float(point[1])]
+                # Demo roads store [lat, lng]; raw routes use GeoJSON [lng, lat].
+                pair = [float(point[1]), float(point[0])]
                 if not coordinates or coordinates[-1] != pair:
                     coordinates.append(pair)
         # Ensure the geometry actually meets the requested endpoints.
         if coordinates:
-            coordinates[0] = [origin["lat"], origin["lng"]]
-            coordinates[-1] = [destination["lat"], destination["lng"]]
+            coordinates[0] = [origin["lng"], origin["lat"]]
+            coordinates[-1] = [destination["lng"], destination["lat"]]
         if len(coordinates) >= 2:
             distance_m = variant.get("distance_km", 0) * 1000
             raw.append(
@@ -300,10 +441,12 @@ def _steps_from_legs(legs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     for leg in legs:
         for step in leg.get("steps", []) or []:
             maneuver = step.get("maneuver") or {}
-            kind = str(maneuver.get("type") or "").replace(" ", " ").capitalize()
-            modifier = str(maneuver.get("modifier") or "").replace(" ", " ").capitalize()
+            kind = str(maneuver.get("type") or "").capitalize()
+            modifier = str(maneuver.get("modifier") or "").capitalize()
             name = step.get("name") or "road"
-            if modifier:
+            if step.get("instruction"):
+                instruction = str(step["instruction"])
+            elif modifier:
                 instruction = f"{kind} {modifier} onto {name}" if kind else f"{modifier} onto {name}"
             elif kind == "Depart":
                 instruction = f"Head out on {name}"
@@ -430,7 +573,7 @@ def plan_route(
     if not destination["geocoded"]:
         warnings.append(f"Could not locate '{destination['label']}'; using a regional centre.")
 
-    raw, provider_id, provider_warnings = _provider_routes(origin, destination)
+    raw, provider_id, provider_warnings = _provider_routes(origin, destination, vehicle)
     warnings.extend(provider_warnings)
     source = provider_id or "offline-graph"
     source_label = PROVIDER_LABELS.get(provider_id, "Built-in NER road graph") if provider_id else "Built-in NER road graph"

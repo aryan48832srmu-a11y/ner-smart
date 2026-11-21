@@ -39,6 +39,25 @@ function MapInteractions({
   return null;
 }
 
+/** Frame the full route like a consumer navigation map once results arrive. */
+function RouteFitter({ routeLayers }: { routeLayers?: RouteLayer[] }) {
+  const map = useMap();
+  const points = (routeLayers ?? []).flatMap((layer) => layer.coordinates.flat());
+  const signature = points.length
+    ? `${points.length}:${points[0][0]},${points[0][1]}:${points[points.length - 1][0]},${points[points.length - 1][1]}`
+    : '';
+
+  useEffect(() => {
+    if (points.length < 2) return;
+    const bounds = L.latLngBounds(points.map(([lat, lng]) => L.latLng(lat, lng)));
+    map.fitBounds(bounds, { padding: [36, 36], maxZoom: 10, animate: true });
+    // `signature` changes only when a new route result is rendered.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, map]);
+
+  return null;
+}
+
 function cityIcon(type: string) {
   const size = type === 'capital' ? 12 : type === 'major_city' ? 10 : 7;
   const color = type === 'capital' ? '#facc15' : type === 'major_city' ? '#60a5fa' : '#94a3b8';
@@ -207,6 +226,7 @@ export function NERMap({
         <ScaleControl position="bottomright" imperial={false} />
 
         <MapInteractions onMapClick={onMapClick} focus={focus} />
+        <RouteFitter routeLayers={routeLayers} />
 
         {roads.map((road) => {
           const meta = roadStatusMeta[road.status] ?? roadStatusMeta.risky;

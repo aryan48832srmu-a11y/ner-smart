@@ -1,5 +1,8 @@
 """Tests for the resilient real-road route planner."""
 
+import json
+import math
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -52,9 +55,53 @@ def _osrm_payload():
     }
 
 
+def _encode_polyline(points: list[list[float]], precision: int = 6) -> str:
+    """Minimal polyline encoder for test fixtures (lat, lng input)."""
+    factor = 10 ** precision
+    previous = [0, 0]
+    encoded: list[str] = []
+    for lat, lng in points:
+        for index, value in enumerate((lat, lng)):
+            scaled = int(round(value * factor))
+            delta = scaled - previous[index]
+            previous[index] = scaled
+            number = ~(delta << 1) if delta < 0 else (delta << 1)
+            while number >= 0x20:
+                encoded.append(chr((0x20 | (number & 0x1F)) + 63))
+                number >>= 5
+            encoded.append(chr(number + 63))
+    return "".join(encoded)
+
+
+def _valhalla_payload():
+    shape = _encode_polyline(
+        [[26.1445, 91.7362], [26.50, 91.90], [26.90, 92.20], [27.20, 92.60]]
+    )
+    trip = {
+        "status": 0,
+        "summary": {"length": 280.6, "time": 14430},
+        "legs": [
+            {
+                "shape": shape,
+                "maneuvers": [
+                    {
+                        "instruction": "Turn left onto NH 27",
+                        "length": 12.0,
+                        "time": 600,
+                        "street_names": ["NH 27"],
+                    }
+                ],
+            }
+        ],
+    }
+    return {"trip": trip, "alternates": [{"trip": dict(trip)}]}
+
+
 @pytest.fixture(autouse=True)
-def _clear_cache():
+def _clear_cache(monkeypatch):
     routing_service.clear_cache()
+    # Existing fallback tests use OSRM payloads; Valhalla is tested explicitly.
+    monkeypatch.setattr(routing_service.settings, "ROUTING_PROVIDERS", "osrm-public")
     yield
     routing_service.clear_cache()
 
@@ -106,6 +153,47 @@ def test_cache_avoids_repeated_provider_calls(store, monkeypatch):
     routing_service.plan_route(**kwargs)
     routing_service.plan_route(**kwargs)
     assert calls["count"] == 1
+
+
+def test_plan_uses_valhalla_natural_directions(store, monkeypatch):
+    monkeypatch.setattr(routing_service.settings, "ROUTING_PROVIDERS", "valhalla")
+    seen = {}
+
+    def fake_get(url, params):
+        request = json.loads(params["json"])
+        seen["costing"] = request["costing"]
+        seen["alternates"] = request["alternates"]
+        return _valhalla_payload()
+
+    monkeypatch.setattr(routing_service, "_provider_get", fake_get)
+
+    result = routing_service.plan_route(
+        "Guwahati", "Tawang", mode="fastest",
+        origin_lat=26.1445, origin_lng=91.7362,
+        destination_lat=27.20, destination_lng=92.60,
+        vehicle="Heavy Truck",
+    )
+
+    assert result["source"] == "valhalla"
+    assert result["live"] is True
+    assert seen["costing"] == "truck"
+    assert seen["alternates"] == 2
+    assert len(result["routes"]) == 2
+    first = result["recommended"]["coordinates"][0]
+    # UI-ready coordinates are [lat, lng]; Valhalla raw shapes are [lng, lat].
+    assert math.isclose(first[0], 26.1445, abs_tol=0.001)
+    assert math.isclose(first[1], 91.7362, abs_tol=0.001)
+    assert result["recommended"]["steps"][0]["instruction"] == "Turn left onto NH 27"
+
+
+def test_offline_graph_uses_geojson_coordinate_order(store):
+    origin = {"label": "Guwahati", "lat": 26.1445, "lng": 91.7362}
+    destination = {"label": "Tawang", "lat": 27.20, "lng": 92.60}
+    raw, warnings = routing_service._offline_routes(origin, destination, "General", "Normal")
+    assert raw, warnings
+    first = raw[0]["geometry"]["coordinates"][0]
+    assert math.isclose(first[0], 91.7362, abs_tol=0.001)
+    assert math.isclose(first[1], 26.1445, abs_tol=0.001)
 
 
 def test_modes_change_the_recommendation(store, monkeypatch):

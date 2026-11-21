@@ -5,14 +5,14 @@
 the Python API, AI risk engine, real-road routing and live incident feeds stay on
 Render. The build in `frontend/dist-ftp` already points at
 `https://ner-smart-vujs.onrender.com/api`, so no server-side code is needed on
-InfinityFree. Routing (OSRM) and live incidents (GDACS/USGS) are keyless and are
-proxied through Render, so the browser needs no API token.
+InfinityFree. Routing (Valhalla + OSRM) and live incidents (GDACS/USGS) are
+keyless and are proxied through Render, so the browser needs no API token.
 
 ```
 Visitor ──► yourname.infinityfreeapp.com   (HTML/CSS/JS uploaded by FileZilla)
                     │  fetch() calls
                     ▼
-            ner-smart-vujs.onrender.com/api (FastAPI + SQLite + OSRM/GDACS/USGS proxy)
+            ner-smart-vujs.onrender.com/api (FastAPI + SQLite + Valhalla/OSRM/GDACS/USGS proxy)
 ```
 
 ---
@@ -183,7 +183,7 @@ do not need a Render deploy.
 | --- | --- | --- |
 | React UI (`dist-ftp`) | InfinityFree | Static files, free, no Python needed |
 | API + AI model + SQLite | Render | Free tier; sleeps when idle |
-| Road geometry | Public OSRM | Fetched by Render; no key; graph fallback on failure |
+| Road geometry | Valhalla + public OSRM | Fetched by Render; no key; human-readable directions; graph fallback |
 | Live incidents | GDACS + USGS | Fetched/cached by Render; no key; no demo substitution |
 | Map tiles | CARTO / OpenStreetMap | Loaded directly by the browser |
 | Source code + docs | GitHub | <https://github.com/aryan48832srmu-a11y/ner-smart> |

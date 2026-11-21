@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     ROUTING_TIMEOUT_SECONDS: float = 8.0
     ROUTING_CACHE_TTL_SECONDS: int = 600
-    ROUTING_PROVIDERS: str = "osrm-public,osrm-de"
+    ROUTING_PROVIDERS: str = "valhalla,osrm-public,osrm-de"
 
     # ------------------------------------------------------------------
     # Real incidents from public web feeds (GDACS + USGS). No API key.

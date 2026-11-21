@@ -41,7 +41,7 @@ It is **not** production-grade or government-certified — every AI prediction i
   - City / capital / town markers, warehouse & hospital markers, incident markers
   - Click a road to open detailed **Road Details** (accessibility, weather/landslide/disruption risk, 12-hour AI forecast, alternatives)
 - **Dashboard** with live stat cards, an **AI Situation Panel**, risky-route listing, weather warnings and an active-incidents table sourced from real feeds plus field reports
-- **Real-Road Route Planner** — drivable OpenStreetMap road geometry from public OSRM servers, with **Safest / Fastest / Shortest** modes, cargo/priority weighting, turn-by-turn steps, incidents-near-route and a clear recommendation rationale. A built-in graph and direct estimate keep route planning working when live providers fail.
+- **Real-Road Route Planner** — drivable OpenStreetMap road geometry from public **Valhalla** and **OSRM** servers, with **Safest / Fastest / Shortest** modes, cargo/priority weighting, natural Google-Maps-style turn-by-turn steps, full-route map framing, incidents-near-route and a clear recommendation rationale. A built-in graph and direct estimate keep route planning working when live providers fail.
 - **AI Risk Engine** — Random Forest-style Gradient Boosting done in `scikit-learn`, trained on synthetic-but-realistic data (`POST /api/predict-risk`)
 - **12-Hour Disruption Forecast** per road
 - **Live Incidents** — real, keyless events from **GDACS** (floods, fires, cyclones, droughts, earthquakes) and **USGS** (earthquakes), cached for 10 minutes, with region filters, source links and a live map. No seeded demo incidents are shown.
@@ -62,7 +62,7 @@ It is **not** production-grade or government-certified — every AI prediction i
 | Backend   | Python, FastAPI, Pydantic                                          |
 | Database  | SQLite-compatible (in-memory store by default for the demo)        |
 | AI/ML     | scikit-learn (Gradient Boosting), numpy                            |
-| Routing   | Public OSRM road services + built-in graph fallback, transparent scoring |
+| Routing   | Public Valhalla + OSRM road services, polyline decoding, built-in graph fallback, transparent scoring |
 | Live data | GDACS RSS and USGS FDSN feeds (keyless, proxied by the backend)    |
 
 ---
@@ -261,7 +261,7 @@ backend as a keyless proxy.
 | GET    | `/api/geocode/reverse`          | Reverse geocode a map pin via OSM Nominatim                       |
 | GET    | `/api/geocode/search`           | Search for a place by name                                        |
 | GET    | `/api/routes`                   | Road + city data for the map/inputs                               |
-| POST   | `/api/routes/plan`              | Real-road planner: OSRM with graph/direct fallbacks, incident overlay |
+| POST   | `/api/routes/plan`              | Real-road planner: Valhalla + OSRM with graph/direct fallbacks, incident overlay |
 | POST   | `/api/routes/optimize`          | Score existing road alternatives (origin/destination/cargo)       |
 | POST   | `/api/predict-risk`             | ML disruption-risk prediction                                     |
 | GET    | `/api/forecast/{roadId}`        | 12-hour disruption forecast for a road                            |
@@ -277,8 +277,8 @@ backend as a keyless proxy.
 
 ## Honesty & Labelling
 
-- **Real:** live incidents from GDACS/USGS, drivable road geometry from public OSRM servers,
-  OSM place search/reverse geocoding and public raster map tiles.
+- **Real:** live incidents from GDACS/USGS, drivable road geometry from public Valhalla and OSRM
+  servers, OSM place search/reverse geocoding and public raster map tiles.
 - **Simulated / demo:** road network, warehouses, hospitals, supply requests, weather fallback,
   image analysis, disruption forecasts and ML risk scores. This is not government or operational data.
 - Seeded demo incidents `inc-001`–`inc-008` are excluded everywhere; the incident list, dashboard,
@@ -305,7 +305,7 @@ Useful backend settings:
 | `APP_NAME` / `APP_VERSION` | `NDRMS` / `1.3.0` | Branding and health response |
 | `ROUTING_TIMEOUT_SECONDS` | `8.0` | Per-provider OSRM timeout |
 | `ROUTING_CACHE_TTL_SECONDS` | `600` | Route cache duration |
-| `ROUTING_PROVIDERS` | `osrm-public,osrm-de` | Ordered public OSRM providers |
+| `ROUTING_PROVIDERS` | `valhalla,osrm-public,osrm-de` | Ordered keyless road-routing providers |
 | `LIVE_INCIDENTS_ENABLED` | `true` | Enable GDACS/USGS live incident feeds |
 | `LIVE_INCIDENTS_CACHE_TTL_SECONDS` | `600` | Feed cache duration (fair use) |
 | `LIVE_INCIDENTS_TIMEOUT_SECONDS` | `10.0` | Feed request timeout |
