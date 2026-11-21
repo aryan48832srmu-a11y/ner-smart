@@ -35,8 +35,42 @@ function MapRecenter({ target }: { target: { lat: number; lng: number; ts: numbe
   const map = useMap();
   useEffect(() => {
     if (!target) return;
+    map.invalidateSize();
     map.flyTo([target.lat, target.lng], Math.max(map.getZoom(), 13), { duration: 0.8 });
   }, [target, map]);
+  return null;
+}
+
+/**
+ * Leaflet measures its container once when it mounts. Inside a modal that is
+ * mounted on demand, the flex/overflow layout often has not settled yet, so
+ * the map can initialise at 0px and render grey/blank tiles with dead clicks.
+ * Force a size recalculation now, on the next frame, after layout settles and
+ * whenever the viewport changes (rotation, keyboard, sidebar, etc.).
+ */
+function MapAutoResize() {
+  const map = useMap();
+  useEffect(() => {
+    let raf = 0;
+    const timers: number[] = [];
+    const resize = () => map.invalidateSize({ animate: false, pan: false });
+
+    resize();
+    raf = requestAnimationFrame(() => {
+      resize();
+      timers.push(window.setTimeout(resize, 120));
+      timers.push(window.setTimeout(resize, 400));
+    });
+    window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', resize);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach(window.clearTimeout);
+      window.removeEventListener('resize', resize);
+      window.removeEventListener('orientationchange', resize);
+    };
+  }, [map]);
   return null;
 }
 
@@ -337,11 +371,25 @@ export function Incidents() {
 
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-400">Latitude</label>
-            <input type="number" step="0.0001" value={form.lat} onChange={(e) => setForm({ ...form, lat: parseFloat(e.target.value) || 0 })} className="w-full rounded-lg border border-line bg-base-900 px-3 py-2 text-sm text-slate-800 outline-none focus:border-accent-500" />
+            <input
+              type="number"
+              step="0.0001"
+              value={form.lat}
+              onChange={(e) => setForm({ ...form, lat: parseFloat(e.target.value) || 0 })}
+              onBlur={() => setMapTarget({ lat: form.lat, lng: form.lng, ts: Date.now() })}
+              className="w-full rounded-lg border border-line bg-base-900 px-3 py-2 text-sm text-slate-800 outline-none focus:border-accent-500"
+            />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-400">Longitude</label>
-            <input type="number" step="0.0001" value={form.lng} onChange={(e) => setForm({ ...form, lng: parseFloat(e.target.value) || 0 })} className="w-full rounded-lg border border-line bg-base-900 px-3 py-2 text-sm text-slate-800 outline-none focus:border-accent-500" />
+            <input
+              type="number"
+              step="0.0001"
+              value={form.lng}
+              onChange={(e) => setForm({ ...form, lng: parseFloat(e.target.value) || 0 })}
+              onBlur={() => setMapTarget({ lat: form.lat, lng: form.lng, ts: Date.now() })}
+              className="w-full rounded-lg border border-line bg-base-900 px-3 py-2 text-sm text-slate-800 outline-none focus:border-accent-500"
+            />
           </div>
 
           <div className="sm:col-span-2">
@@ -363,7 +411,7 @@ export function Incidents() {
 
           <div className="sm:col-span-2">
             <label className="mb-1 block text-xs font-medium text-slate-400">Or fine-tune the pin on the map</label>
-            <div className="h-64 overflow-hidden rounded-lg border border-line">
+            <div className="h-64 overflow-hidden rounded-lg border border-line sm:h-72">
               <MapContainer
                 center={[form.lat, form.lng]}
                 zoom={7}
@@ -377,6 +425,7 @@ export function Incidents() {
                   maxZoom={19}
                   detectRetina
                 />
+                <MapAutoResize />
                 <MapClickHandler
                   onPick={(pos) => setForm((f) => ({ ...f, lat: pos.lat, lng: pos.lng }))}
                 />
