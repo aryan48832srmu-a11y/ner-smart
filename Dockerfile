@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # ---------------------------------------------------------------------------
-# NEXUS single-service image: builds the Vite frontend, then serves the
+# NDRMS single-service image: builds the Vite frontend, then serves the
 # static bundle and the FastAPI API from one process on one port.
 # ---------------------------------------------------------------------------
 
