@@ -288,23 +288,40 @@ def _risk_from_disruption(avg: float) -> str:
     return "Low"
 
 
+def _parse_reported_at(raw: Any) -> datetime | None:
+    """Parse an incident timestamp into a naive UTC datetime.
+
+    SQLite-backed reports store naive UTC (see ``app.db.utcnow``), while live
+    GDACS/USGS incidents include an explicit timezone offset. Mixing aware and
+    naive datetimes raises ``TypeError`` on subtraction, so normalise both to
+    naive UTC before doing any date arithmetic.
+    """
+    from datetime import datetime, timezone
+
+    if not raw:
+        return None
+    try:
+        when = datetime.fromisoformat(str(raw))
+    except (TypeError, ValueError):
+        return None
+    if when.tzinfo is not None:
+        when = when.astimezone(timezone.utc).replace(tzinfo=None)
+    return when
+
+
 def _disruptions_over_time(incidents: list[dict]) -> list[dict[str, Any]]:
     """Bucket persisted incidents into the last 8 weeks (oldest first)."""
-    from datetime import datetime
-
     from app.db import utcnow
 
     now = utcnow()
     buckets = [0] * 8
     for inc in incidents:
-        raw = inc.get("reported_at")
-        if not raw:
+        when = _parse_reported_at(inc.get("reported_at"))
+        if when is None:
             continue
-        try:
-            when = datetime.fromisoformat(raw)
-        except ValueError:
-            continue
-        weeks_ago = int((now - when).total_seconds() // (7 * 24 * 3600))
+        # Feed timestamps can be slightly ahead of the server clock; clamp to 0
+        # so a future event lands in "This week" instead of overflowing the list.
+        weeks_ago = max(0, int((now - when).total_seconds() // (7 * 24 * 3600)))
         idx = 7 - min(weeks_ago, 7)
         buckets[idx] += 1
     labels = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7", "This week"]
@@ -325,12 +342,8 @@ def _delivery_success(incidents: list[dict]) -> list[dict[str, Any]]:
         month_index = (now.month - 1 - m) % 12
         labels.append(datetime(2000, month_index + 1, 1).strftime("%b"))
     for inc in incidents:
-        raw = inc.get("reported_at")
-        if not raw:
-            continue
-        try:
-            when = datetime.fromisoformat(raw)
-        except ValueError:
+        when = _parse_reported_at(inc.get("reported_at"))
+        if when is None:
             continue
         months_ago = (now.year - when.year) * 12 + (now.month - when.month)
         if 0 <= months_ago <= 5:
